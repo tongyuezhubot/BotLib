@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="机器人学习博客：从零开始学习控制、感知、规划与强化学习。"
+    />
+    <title>机器人学习博客 | 从零开始</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top">Robot Notes</a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#posts">文章</a>
+        <a href="#roadmap">路线图</a>
+        <a href="#resources">资源</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="tag">BEGINNER FRIENDLY</p>
+        <h1>从零开始的机器人学习博客</h1>
+        <p>
+          聚焦机器人学习核心知识：数学基础、控制、状态估计、运动规划、强化学习与工程实践。
+          每篇内容都按“概念 -> 公式 -> 代码 -> 实验”组织。
+        </p>
+        <a class="cta" href="#posts">开始阅读</a>
+      </section>
+
+      <section id="posts" class="panel">
+        <div class="panel-head">
+          <h2>最新文章</h2>
+          <button id="toggleBtn" type="button" class="small-btn">只看入门</button>
+        </div>
+        <div id="postGrid" class="post-grid"></div>
+      </section>
+
+      <section id="roadmap" class="panel">
+        <h2>学习路线图</h2>
+        <ol class="roadmap">
+          <li>数学与编程基础：线代、概率、Python、Numpy</li>
+          <li>机器人学基础：坐标变换、运动学、动力学</li>
+          <li>感知与估计：滤波、SLAM、传感器融合</li>
+          <li>规划与控制：轨迹规划、MPC、PID/LQR</li>
+          <li>机器人学习：模仿学习、强化学习、离线 RL</li>
+          <li>系统实战：仿真到部署（Sim2Real）</li>
+        </ol>
+      </section>
+
+      <section id="resources" class="panel">
+        <h2>基础资源</h2>
+        <ul class="resources">
+          <li><a href="https://www.ros.org/" target="_blank" rel="noreferrer">ROS/ROS2 官方网站</a></li>
+          <li><a href="https://pytorch.org/" target="_blank" rel="noreferrer">PyTorch</a></li>
+          <li><a href="https://gymnasium.farama.org/" target="_blank" rel="noreferrer">Gymnasium</a></li>
+          <li><a href="https://mujoco.org/" target="_blank" rel="noreferrer">MuJoCo</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="./main.js"></script>
+  </body>
+</html>
