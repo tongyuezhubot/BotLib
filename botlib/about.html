@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Robot Notes 博客说明与公式写作指南。" />
+    <title>关于博客 | Robot Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="./index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="./index.html">首页</a>
+        <a href="./about.html" aria-current="page">关于博客</a>
+        <a href="./posts/kalman.html">示例文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>关于这个博客</h1>
+        <p>
+          这个博客用于系统化整理机器人学习。每篇文章遵循固定结构：
+          问题定义、最小公式、可运行代码、实验建议。
+        </p>
+
+        <h2>公式写作</h2>
+        <p>正文里可直接写 LaTeX。示例：行内公式 \\(x_{t+1}=Ax_t+Bu_t\\)。</p>
+        <p>块级公式示例：</p>
+        <p>
+          $$
+          K = P H^T (H P H^T + R)^{-1}
+          $$
+        </p>
+
+        <h2>写作模板</h2>
+        <pre><code>## 问题
+一句话说明问题
+
+## 公式
+写关键公式：\\(J(\\theta)\\)
+
+## 代码
+给出最小可运行片段
+
+## 实验
+说明输入、输出和评价指标</code></pre>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

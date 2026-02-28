@@ -1,10 +1,22 @@
 const posts = [
-  { title: "第 1 篇：机器人学习要补哪些数学？", level: "入门", minutes: 8 },
-  { title: "第 2 篇：坐标变换与齐次矩阵", level: "入门", minutes: 10 },
-  { title: "第 3 篇：卡尔曼滤波的最小实现", level: "进阶", minutes: 12 },
-  { title: "第 4 篇：轨迹规划与 MPC 直觉", level: "进阶", minutes: 14 },
-  { title: "第 5 篇：强化学习在控制中的基本套路", level: "进阶", minutes: 16 },
-  { title: "第 6 篇：Sim2Real 常见失败点", level: "入门", minutes: 9 },
+  {
+    title: "第 1 篇：卡尔曼滤波最小推导",
+    level: "入门",
+    minutes: 8,
+    href: "./posts/kalman.html",
+  },
+  {
+    title: "第 2 篇：LQR 最小推导",
+    level: "进阶",
+    minutes: 10,
+    href: "./posts/lqr.html",
+  },
+  {
+    title: "第 3 篇：强化学习基础公式",
+    level: "入门",
+    minutes: 9,
+    href: "./posts/rl-basics.html",
+  },
 ];
 
 const yearEl = document.getElementById("year");
@@ -21,11 +33,11 @@ function renderPosts() {
   postGrid.innerHTML = list
     .map(
       (post) => `
-        <article class="post">
+        <a class="post" href="${post.href}">
           <h3>${post.title}</h3>
           <p class="meta">阅读时间：约 ${post.minutes} 分钟</p>
           <span class="badge">${post.level}</span>
-        </article>
+        </a>
       `,
     )
     .join("");

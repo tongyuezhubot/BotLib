@@ -58,7 +58,8 @@ body {
   font-weight: 500;
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a[aria-current="page"] {
   color: var(--text);
 }
 
@@ -145,6 +146,13 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.post:hover {
+  border-color: #c9ced6;
 }
 
 .post h3 {
@@ -195,6 +203,35 @@ h2 {
 .card a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.prose h1 {
+  margin-top: 0;
+}
+
+.prose h2 {
+  margin-top: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose p,
+.prose ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.prose pre {
+  margin: 0.8rem 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fafafa;
+  padding: 0.8rem;
+  overflow: auto;
+}
+
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92rem;
 }
 
 .footer {
