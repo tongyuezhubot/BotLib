@@ -170,6 +170,55 @@ body {
   margin-left: 0.5rem;
 }
 
+.profile {
+  margin-bottom: 1.5rem;
+}
+
+.profile h2 {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.4rem;
+}
+
+.profile .tagline {
+  color: var(--muted);
+  margin: 0;
+  font-size: 1rem;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.tag {
+  background: var(--bg);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.contact-list li {
+  margin: 0.5rem 0;
+}
+
+.contact-list a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.contact-list a:hover {
+  text-decoration: underline;
+}
+
 .footer {
   padding: 1.2rem 0 1.6rem;
   color: var(--muted);
