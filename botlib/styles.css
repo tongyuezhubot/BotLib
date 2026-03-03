@@ -80,8 +80,8 @@ body {
   margin: 0;
   text-align: center;
   font-family: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Noto Serif SC", serif;
-  font-size: clamp(2.1rem, 5vw, 3.3rem);
-  font-weight: 600;
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  font-weight: 400;
   letter-spacing: 0.03em;
   line-height: 1.45;
 }
