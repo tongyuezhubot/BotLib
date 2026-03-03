@@ -105,7 +105,65 @@
           只用一阶优化就可实现，工程实现更简单，且允许同一批数据做多轮 mini-batch 更新。
         </p>
 
-        <h2>6. 论文中的训练流程（简化版）</h2>
+        <h2>6. PPO 训练流程图</h2>
+        <pre class="diagram"><code>
+┌─────────────────────────────────────────────────────────────┐
+│                      PPO 训练流程                            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  1. 采样阶段                                                 │
+│     • 用当前策略 π_θ 与环境交互                              │
+│     • 收集 T 步经验：(s_t, a_t, r_t, s_{t+1})               │
+│     • 存储到回放缓冲区                                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. 计算优势估计                                             │
+│     • 使用 GAE 计算 Â_t                                      │
+│     • 计算回报 R_t = V(s_t) + Â_t                           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. 固定旧策略                                               │
+│     • θ_old ← θ                                              │
+│     • 计算概率比 r_t(θ) = π_θ(a_t|s_t) / π_{θ_old}(a_t|s_t) │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. 多轮策略更新 (K epochs)                                  │
+│     ┌─────────────────────────────────────────────────────┐ │
+│     │ for each mini-batch:                                │ │
+│     │   • 计算裁剪目标 L^CLIP(θ)                          │ │
+│     │   • 最大化目标函数（梯度上升）                       │ │
+│     │   • 更新策略网络参数 θ                              │ │
+│     └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. 更新价值函数                                             │
+│     • 最小化价值损失 ||V(s_t) - R_t||²                      │
+│     • 更新价值网络参数                                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   是否收敛？     │
+                    └─────────────────┘
+                         │        │
+                        否        是
+                         │        │
+                         ▼        ▼
+                       返回      结束
+                       第1步
+        </code></pre>
+
+        <h2>7. 论文中的训练流程（简化版）</h2>
         <pre><code>for iteration = 1,2,...:
   1) 用当前策略 pi_theta 与环境交互，收集 T 步数据
   2) 计算优势估计 A_hat_t 与回报目标
@@ -114,7 +172,186 @@
   5) 更新价值函数参数
   6) 重复</code></pre>
 
-        <h2>7. 实践超参数（与论文经验一致）</h2>
+        <h2>8. PyTorch 代码实现</h2>
+        <h3>8.1 Actor-Critic 网络定义</h3>
+        <pre><code class="language-python">import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.distributions import Categorical
+
+class ActorCritic(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=64):
+        super(ActorCritic, self).__init__()
+        # 共享的特征提取层
+        self.shared = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU()
+        )
+        # Actor: 输出动作概率分布
+        self.actor = nn.Linear(hidden_dim, action_dim)
+        # Critic: 输出状态价值
+        self.critic = nn.Linear(hidden_dim, 1)
+    
+    def forward(self, state):
+        features = self.shared(state)
+        logits = self.actor(features)
+        value = self.critic(features)
+        return logits, value
+    
+    def get_action(self, state):
+        """根据当前策略采样动作"""
+        logits, value = self.forward(state)
+        dist = Categorical(logits=logits)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+        return action, log_prob, value
+    
+    def evaluate(self, state, action):
+        """评估给定状态和动作"""
+        logits, value = self.forward(state)
+        dist = Categorical(logits=logits)
+        log_prob = dist.log_prob(action)
+        entropy = dist.entropy()
+        return log_prob, value.squeeze(-1), entropy</code></pre>
+
+        <h3>8.2 PPO-Clip 更新逻辑</h3>
+        <pre><code class="language-python">class PPO:
+    def __init__(self, state_dim, action_dim, lr=3e-4, 
+                 gamma=0.99, lam=0.95, eps_clip=0.2,
+                 K_epochs=4, device='cpu'):
+        self.device = device
+        self.policy = ActorCritic(state_dim, action_dim).to(device)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        
+        self.gamma = gamma      # 折扣因子
+        self.lam = lam          # GAE 参数
+        self.eps_clip = eps_clip  # 裁剪系数 ε
+        self.K_epochs = K_epochs  # 每次采样后的更新轮数
+    
+    def compute_gae(self, rewards, values, dones, next_value):
+        """计算广义优势估计 GAE"""
+        advantages = []
+        gae = 0
+        
+        # 从后向前计算
+        for t in reversed(range(len(rewards))):
+            if t == len(rewards) - 1:
+                next_val = next_value
+            else:
+                next_val = values[t + 1]
+            
+            # TD 误差: δ_t = r_t + γ·V(s_{t+1}) - V(s_t)
+            delta = rewards[t] + self.gamma * next_val * (1 - dones[t]) - values[t]
+            
+            # GAE: Â_t = δ_t + (γλ)·Â_{t+1}
+            gae = delta + self.gamma * self.lam * (1 - dones[t]) * gae
+            advantages.insert(0, gae)
+        
+        return torch.tensor(advantages, dtype=torch.float32, device=self.device)
+    
+    def update(self, memory):
+        """使用收集的经验更新策略"""
+        # 从 memory 中提取数据
+        states = torch.stack(memory.states).to(self.device)
+        actions = torch.stack(memory.actions).to(self.device)
+        old_log_probs = torch.stack(memory.log_probs).to(self.device)
+        
+        # 计算优势估计
+        advantages = self.compute_gae(
+            memory.rewards, memory.values, memory.dones, memory.next_value
+        )
+        
+        # 计算回报（用于更新价值函数）
+        returns = advantages + torch.tensor(memory.values, device=self.device)
+        
+        # 归一化优势（稳定训练）
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        
+        # 多轮 epoch 更新
+        for _ in range(self.K_epochs):
+            # 评估当前策略
+            log_probs, state_values, entropy = self.policy.evaluate(states, actions)
+            
+            # 计算概率比 r_t(θ)
+            ratios = torch.exp(log_probs - old_log_probs)
+            
+            # 计算裁剪目标
+            surr1 = ratios * advantages          # 未裁剪项
+            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            
+            # PPO-Clip 目标: L^CLIP = min(r·A, clip(r)·A)
+            actor_loss = -torch.min(surr1, surr2).mean()
+            
+            # 价值函数损失
+            critic_loss = nn.MSELoss()(state_values, returns)
+            
+            # 熵奖励（鼓励探索）
+            entropy_bonus = entropy.mean()
+            
+            # 总损失
+            loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy_bonus
+            
+            # 梯度上升
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+        
+        return loss.item()</code></pre>
+
+        <h3>8.3 完整训练循环示例</h3>
+        <pre><code class="language-python">def train(env, ppo, max_episodes=1000, max_steps=2048):
+    """PPO 训练主循环"""
+    from collections import namedtuple
+    
+    Memory = namedtuple('Memory', ['states', 'actions', 'log_probs', 
+                                    'rewards', 'values', 'dones', 'next_value'])
+    
+    for episode in range(max_episodes):
+        memory_data = {k: [] for k in Memory._fields[:-1]}
+        
+        state = env.reset()
+        episode_reward = 0
+        
+        # 收集 T 步经验
+        for step in range(max_steps):
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(ppo.device)
+            
+            with torch.no_grad():
+                action, log_prob, value = ppo.policy.get_action(state_tensor)
+            
+            next_state, reward, done, _ = env.step(action.item())
+            
+            # 存储经验
+            memory_data['states'].append(state_tensor)
+            memory_data['actions'].append(action)
+            memory_data['log_probs'].append(log_prob)
+            memory_data['rewards'].append(reward)
+            memory_data['values'].append(value.item())
+            memory_data['dones'].append(float(done))
+            
+            state = next_state
+            episode_reward += reward
+            
+            if done:
+                break
+        
+        # 计算最后状态的 value（用于 GAE）
+        with torch.no_grad():
+            next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0).to(ppo.device)
+            _, next_value = ppo.policy(next_state_tensor)
+            next_value = next_value.item()
+        
+        memory = Memory(**memory_data, next_value=next_value)
+        
+        # 更新策略
+        loss = ppo.update(memory)
+        
+        if episode % 10 == 0:
+            print(f"Episode {episode}, Reward: {episode_reward:.2f}, Loss: {loss:.4f}")</code></pre>
+
+        <h2>9. 实践超参数（与论文经验一致）</h2>
         <ul>
           <li>裁剪系数 \(\epsilon\)：0.1 或 0.2。</li>
           <li>GAE 参数 \(\lambda\)：常用 0.95。</li>
@@ -123,7 +360,7 @@
           <li>监控近似 KL，过大时可提前停止本轮更新。</li>
         </ul>
 
-        <h2>8. 参考</h2>
+        <h2>10. 参考</h2>
         <p>
           John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov.
           <em>Proximal Policy Optimization Algorithms</em>, 2017.
