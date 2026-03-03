@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PPO 算法学习" />
+    <meta name="description" content="结合 PPO 原论文的算法学习笔记" />
     <title>PPO算法学习 | 强化学习</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,21 +35,99 @@
 
     <main class="container">
       <article class="section prose">
-        <h1>PPO算法学习</h1>
+        <h1>PPO算法学习（结合原论文）</h1>
         <p>
-          PPO (Proximal Policy Optimization) 的核心是限制策略更新幅度，
-          提高训练稳定性。
+          本文基于 Schulman 等人在 2017 年提出的
+          <em>Proximal Policy Optimization Algorithms</em>（arXiv:1707.06347）整理。
+          重点是理解论文中的两个代理目标：<strong>KL 惩罚版</strong>和<strong>裁剪版</strong>。
         </p>
-        <p>目标函数常写为：</p>
+
+        <h2>1. 论文中的基本记号</h2>
+        <p>给定旧策略 \\(\pi_{\theta_{old}}\\) 和新策略 \\(\pi_\theta\\)，定义概率比：</p>
         <p>
           $$
-          L^{CLIP}(\theta)=\mathbb{E}_t\left[\min\left(r_t(\theta)\hat{A}_t,
-          \text{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\hat{A}_t\right)\right]
+          r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}
+          $$
+        </p>
+        <p>标准策略梯度代理目标（未加约束）可写为：</p>
+        <p>
+          $$
+          L^{\text{CPI}}(\theta)=\hat{\mathbb{E}}_t\left[r_t(\theta)\hat{A}_t\right]
+          $$
+        </p>
+        <p>其中 \\(\hat{A}_t\\) 为优势估计（论文实验里使用 GAE）。</p>
+
+        <h2>2. KL 惩罚版目标（PPO-Penalty）</h2>
+        <p>论文先给出带 KL 惩罚的目标：</p>
+        <p>
+          $$
+          L^{\text{KLPEN}}(\theta)=
+          \hat{\mathbb{E}}_t\left[
+          r_t(\theta)\hat{A}_t
+          -\beta\,\mathrm{KL}\!\left(
+          \pi_{\theta_{old}}(\cdot|s_t),\pi_\theta(\cdot|s_t)
+          \right)
+          \right]
           $$
         </p>
         <p>
-          其中 \\(r_t(\theta)=\frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}\\)。
-          这个裁剪项避免策略一步走太远。
+          其中 \\(\beta\\) 可自适应调节：若实际 KL 偏大就增大 \\(\beta\\)，偏小则减小，
+          以控制策略更新幅度。
+        </p>
+
+        <h2>3. 裁剪版目标（PPO-Clip）</h2>
+        <p>论文主推的是更简单稳定的裁剪目标：</p>
+        <p>
+          $$
+          L^{\text{CLIP}}(\theta)=
+          \hat{\mathbb{E}}_t\Big[
+          \min\big(
+          r_t(\theta)\hat{A}_t,
+          \mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\hat{A}_t
+          \big)
+          \Big]
+          $$
+        </p>
+        <p>
+          当 \\(r_t(\theta)\\) 超出区间 \\([1-\epsilon,1+\epsilon]\\) 时，目标被截断，
+          从而抑制一步更新过大。论文中常用 \\(\epsilon=0.1\\) 或 \\(0.2\\)。
+        </p>
+
+        <h2>4. 为什么这个最小值写法有效</h2>
+        <p>
+          直觉上，\\(r_t(\theta)\hat{A}_t\\) 想让策略更偏向高优势动作；
+          但一旦偏得太多，clip 项会限制继续增益。取两者最小值，相当于对“过激更新”加软约束。
+        </p>
+
+        <h2>5. 与 TRPO 的关系</h2>
+        <p>
+          PPO 延续了 TRPO 的“信赖域”思想，但不再解复杂的二阶约束优化问题，
+          只用一阶优化就可实现，工程实现更简单，且允许同一批数据做多轮 mini-batch 更新。
+        </p>
+
+        <h2>6. 论文中的训练流程（简化版）</h2>
+        <pre><code>for iteration = 1,2,...:
+  1) 用当前策略 pi_theta 与环境交互，收集 T 步数据
+  2) 计算优势估计 A_hat_t 与回报目标
+  3) 固定旧策略 pi_theta_old
+  4) 用 PPO 目标(clip 或 KL penalty)做 K 轮小批量梯度上升
+  5) 更新价值函数参数
+  6) 重复</code></pre>
+
+        <h2>7. 实践超参数（与论文经验一致）</h2>
+        <ul>
+          <li>裁剪系数 \\(\epsilon\\)：0.1 或 0.2。</li>
+          <li>GAE 参数 \\(\lambda\\)：常用 0.95。</li>
+          <li>折扣因子 \\(\gamma\\)：常用 0.99。</li>
+          <li>每次采样后做多轮 epoch 更新（如 3-10 轮）。</li>
+          <li>监控近似 KL，过大时可提前停止本轮更新。</li>
+        </ul>
+
+        <h2>8. 参考</h2>
+        <p>
+          John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov.
+          <em>Proximal Policy Optimization Algorithms</em>, 2017.
+          <a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noreferrer">arXiv:1707.06347</a>
         </p>
       </article>
     </main>
