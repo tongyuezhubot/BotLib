@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="强化学习基础公式：贝尔曼方程与策略梯度。" />
+    <meta name="description" content="强化学习基础：贝尔曼方程与策略梯度。" />
     <title>强化学习基础公式 | Robot Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,9 +27,10 @@
     <header class="header">
       <a class="logo" href="../index.html">Robot Notes</a>
       <nav class="nav" aria-label="主导航">
-        <a href="../index.html">首页</a>
-        <a href="../about.html">关于博客</a>
-        <a href="./rl-basics.html" aria-current="page">强化学习</a>
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
       </nav>
     </header>
 
@@ -37,16 +38,30 @@
       <article class="section prose">
         <p class="kicker">学习</p>
         <h1>强化学习基础公式</h1>
+
+        <h2>背景与问题</h2>
+        <p>强化学习（Reinforcement Learning, RL）考虑智能体在与环境的交互中，通过试错获得回报信号，目标是学习一个策略以最大化长期累积回报。与监督学习不同，没有「标准答案」标签，只有奖励（或代价）；与动态规划类似，但环境模型往往未知或难以利用，因此常结合采样与函数近似。本文仅给出<strong>马尔可夫决策过程（MDP）</strong>与<strong>策略评估、策略梯度</strong>的核心公式，作为教科书级回顾。</p>
+
+        <h2>MDP 与回报</h2>
+        <p>设状态 \(s\)、动作 \(a\)、奖励 \(r(s,a)\)（或 \(r_t\)），状态转移 \(s'\sim p(\cdot\mid s,a)\)。策略 \(\pi(a\mid s)\) 表示在状态 \(s\) 下选动作的分布。折扣累积回报（从某时刻起）为 \(G_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}\)，其中 \(\gamma\in(0,1]\) 为折扣因子。价值函数 \(V^{\pi}(s)=\mathbb{E}_{\pi}[G_t\mid s_t=s]\) 表示从 \(s\) 出发、按 \(\pi\) 执行的期望回报。</p>
+
         <h2>贝尔曼期望方程</h2>
-        <p>$$V^{\pi}(s)=\mathbb{E}_{a\sim\pi}[r(s,a)+\gamma\mathbb{E}_{s'}V^{\pi}(s')]$$</p>
+        <p>\(V^{\pi}\) 满足递推关系（当前奖励 + 折扣后的下一状态价值）：</p>
+        <p>$$V^{\pi}(s)=\mathbb{E}_{a\sim\pi(\cdot|s)}\left[r(s,a)+\gamma\,\mathbb{E}_{s'\sim p(\cdot|s,a)}\left[V^{\pi}(s')\right]\right].$$</p>
+        <p>简写为 \(V^{\pi}(s)=\mathbb{E}_{a\sim\pi}[r(s,a)+\gamma\mathbb{E}_{s'}[V^{\pi}(s')]]\)。这是策略评估的基础；在已知模型时可通过迭代或线性方程组求 \(V^{\pi}\)。</p>
 
         <h2>动作价值函数</h2>
-        <p>$$Q^{\pi}(s,a)=\mathbb{E}[r+\gamma\mathbb{E}_{a'\sim\pi}Q^{\pi}(s',a')]$$</p>
+        <p>定义 \(Q^{\pi}(s,a)\) 为在 \(s\) 先执行 \(a\)、之后按 \(\pi\) 的期望回报：</p>
+        <p>$$Q^{\pi}(s,a)=\mathbb{E}\left[r+\gamma\mathbb{E}_{a'\sim\pi}\left[Q^{\pi}(s',a')\right]\right].$$</p>
+        <p>有 \(V^{\pi}(s)=\mathbb{E}_{a\sim\pi}[Q^{\pi}(s,a)]\)。最优价值 \(V^*(s)=\max_{\pi}V^{\pi}(s)\) 与最优 \(Q^*(s,a)\) 满足贝尔曼最优方程，是 Q-learning、DP 等方法的理论依据。</p>
 
         <h2>策略梯度</h2>
-        <p>$$\nabla_{\theta}J(\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_t\nabla_\theta\log\pi_\theta(a_t|s_t)G_t\right]$$</p>
+        <p>当策略由参数 \(\theta\) 参数化（如 \(\pi_\theta(a|s)\)）时，希望最大化期望回报 \(J(\theta)=\mathbb{E}_{\tau\sim\pi_\theta}[G_0]\)。策略梯度定理给出：</p>
+        <p>$$\nabla_\theta J(\theta)=\mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_t\nabla_\theta\log\pi_\theta(a_t|s_t)\,G_t\right].$$</p>
+        <p>即用轨迹中每步的 \(\nabla_\theta\log\pi_\theta(a_t|s_t)\) 乘以从该步起的回报 \(G_t\) 作为梯度估计。实践中常用<strong>优势函数</strong> \(A_t\)（如 \(Q(s_t,a_t)-V(s_t)\) 或 TD 误差的估计）替代 \(G_t\)，以减小方差、加速学习。</p>
 
-        <p>实践中可用优势函数 \\(A_t\\) 替换 \\(G_t\\) 降低方差。</p>
+        <h2>小结</h2>
+        <p>贝尔曼方程刻画了价值函数的递推关系，是策略评估与值函数方法的核心；策略梯度定理给出了直接优化策略的梯度形式。理解这些公式是学习 DQN、Actor-Critic、PPO 等算法的基础。</p>
       </article>
     </main>
 

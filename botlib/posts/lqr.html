@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="LQR 最优控制最小公式。" />
-    <title>LQR 最小推导 | Robot Notes</title>
+    <meta name="description" content="LQR 的背景、问题表述与里卡提递推。" />
+    <title>LQR 线性二次调节 | Robot Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,23 +27,40 @@
     <header class="header">
       <a class="logo" href="../index.html">Robot Notes</a>
       <nav class="nav" aria-label="主导航">
-        <a href="../index.html">首页</a>
-        <a href="../about.html">关于博客</a>
-        <a href="./lqr.html" aria-current="page">LQR</a>
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
       </nav>
     </header>
 
     <main class="container">
       <article class="section prose">
         <p class="kicker">控制</p>
-        <h1>LQR 最小推导</h1>
-        <p>系统模型：$$x_{t+1}=Ax_t+Bu_t$$</p>
-        <p>代价函数：</p>
-        <p>$$J=\sum_{t=0}^{T}(x_t^TQx_t+u_t^TRu_t)+x_T^TQ_fx_T$$</p>
-        <p>最优控制律：</p>
-        <p>$$u_t=-K_tx_t,\quad K_t=(R+B^TP_{t+1}B)^{-1}B^TP_{t+1}A$$</p>
-        <p>里卡提递推：</p>
-        <p>$$P_t=Q+A^TP_{t+1}A-A^TP_{t+1}B(R+B^TP_{t+1}B)^{-1}B^TP_{t+1}A$$</p>
+        <h1>LQR：线性二次调节</h1>
+
+        <h2>背景与动机</h2>
+        <p>对于线性系统，若希望设计一个状态反馈控制律使系统稳定，并同时最小化某种「代价」（例如状态偏差与控制量的加权平方和），就得到<strong>线性二次型调节器（LQR）</strong>问题。其解具有统一的解析形式：最优控制为状态的线性反馈 \(u_t=-K_t x_t\)，增益 \(K_t\) 由一矩阵差分方程（里卡提方程）递推得到。LQR 在理论上是线性最优控制的典范，在机器人平衡、航天器姿态等控制中应用广泛；其思想也延伸到 LQG（含噪声与状态估计）、跟踪问题（LQT）等。</p>
+
+        <h2>问题表述</h2>
+        <p>考虑离散时间线性系统：</p>
+        <p>$$x_{t+1}=Ax_t+Bu_t,$$</p>
+        <p>其中 \(x_t\) 为状态，\(u_t\) 为控制输入。定义有限时域 \(T\) 上的二次代价：</p>
+        <p>$$J=\sum_{t=0}^{T-1}\left(x_t^TQx_t+u_t^TRu_t\right)+x_T^TQ_f x_T.$$</p>
+        <p>其中 \(Q\)、\(Q_f\) 为半正定状态权矩阵（常取对角，表示对各状态分量的重视程度），\(R\) 为正定控制权矩阵（限制控制幅值）。目标是在满足状态方程的前提下，选择控制序列 \(u_0,\ldots,u_{T-1}\) 使 \(J\) 最小。</p>
+
+        <h2>最优控制律与里卡提递推</h2>
+        <p>该问题是线性二次型问题，最优控制存在且唯一，且为状态的<strong>线性</strong>反馈。设最优代价从时刻 \(t\)、状态 \(x_t\) 出发可写为 \(x_t^TP_tx_t\)，则最优控制律为：</p>
+        <p>$$u_t=-K_tx_t,\qquad K_t=(R+B^TP_{t+1}B)^{-1}B^TP_{t+1}A.$$</p>
+        <p>矩阵 \(P_t\) 由<strong>离散时间里卡提方程</strong>逆向递推得到（从终端条件 \(P_T=Q_f\) 往回推）：</p>
+        <p>$$P_t=Q+A^TP_{t+1}A-A^TP_{t+1}B(R+B^TP_{t+1}B)^{-1}B^TP_{t+1}A.$$</p>
+        <p>在时不变系统且 \(T\to\infty\) 的无限时域情形下，\(P_t\) 收敛到常数矩阵 \(P\)，对应增益收敛到常值 \(K\)，即稳态 LQR。此时闭环系统 \(x_{t+1}=(A-BK)x_t\) 渐近稳定（在 \((A,B)\) 可控、\((A,Q^{1/2})\) 可观等标准假设下）。</p>
+
+        <h2>直观理解</h2>
+        <p>\(Q\) 越大表示越希望状态尽快回零，\(R\) 越大表示越限制控制量；\(K\) 在二者之间做最优折中。里卡提方程正是从「末端的代价」倒推，得到每个时刻的最优增益。实际实现时只需离线算好 \(P\) 与 \(K\)，在线做 \(u=-Kx\) 即可，计算量小。</p>
+
+        <h2>小结</h2>
+        <p>LQR 在线性系统、二次代价、无约束的设定下给出最优状态反馈的解析解，由里卡提递推得到增益。掌握其问题形式与里卡提方程，是学习最优控制与后续鲁棒控制、MPC 等的基础。</p>
       </article>
     </main>
 

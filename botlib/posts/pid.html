@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PID 控制简要公式与调参思路。" />
-    <title>PID 控制简要 | Robot Notes</title>
+    <meta name="description" content="PID 控制的背景、公式推导与调参思路。" />
+    <title>PID 控制 | Robot Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -37,20 +37,40 @@
     <main class="container">
       <article class="section prose">
         <p class="kicker">控制</p>
-        <h1>PID 控制简要</h1>
-        <p>误差 \\(e(t)=r(t)-y(t)\\)，PID 输出：</p>
-        <p>$$u(t)=K_p\,e(t)+K_i\int_0^t e(\tau)\,\mathrm{d}\tau+K_d\,\frac{\mathrm{d}e}{\mathrm{d}t}$$</p>
+        <h1>PID 控制</h1>
 
-        <h2>离散形式</h2>
-        <p>$$u_k=K_p\,e_k+K_i\,T_s\sum_{i=0}^k e_i+K_d\,\frac{e_k-e_{k-1}}{T_s}$$</p>
-        <p>其中 \\(T_s\\) 为采样周期。</p>
+        <h2>背景与动机</h2>
+        <p>在运动控制、温控、液位控制等场合，我们常需要让某个被控量（如电机角度、温度、水位）跟踪给定的设定值。系统往往存在惯性、延迟或未知扰动，若仅根据当前误差按比例放大后作为控制量，容易产生振荡或稳态误差。PID 控制是在比例控制（P）的基础上，加入对误差累积（积分 I）与误差变化率（微分 D）的利用，从而在工程上以简单结构实现「减小误差、抑制超调、消除静差」的目标。</p>
 
-        <h2>调参建议</h2>
+        <h2>误差的定义</h2>
+        <p>设 \(r(t)\) 为设定值（参考输入），\(y(t)\) 为被控量（系统输出）。误差定义为</p>
+        <p>$$e(t)=r(t)-y(t).$$</p>
+        <p>控制目标即通过调节控制量 \(u(t)\)，使 \(e(t)\) 尽快趋于零并尽量保持为零。</p>
+
+        <h2>连续时间 PID 律</h2>
+        <p>经典 PID 控制律由三项叠加而成：</p>
         <ul>
-          <li>先只调 \\(K_p\\)，使响应快且无大超调。</li>
-          <li>再加 \\(K_i\\) 消除稳态误差，注意积分饱和。</li>
-          <li>最后加 \\(K_d\\) 抑制超调、加快收敛。</li>
+          <li><strong>比例项（P）</strong>：\(K_p\,e(t)\)。误差越大，控制量越大，反应直接，但单独使用易振荡或存在静差。</li>
+          <li><strong>积分项（I）</strong>：\(K_i\int_0^t e(\tau)\,\mathrm{d}\tau\)。对误差做时间积分，能消除持续存在的小误差（静差），但会带来相位滞后，过强易积分饱和与超调。</li>
+          <li><strong>微分项（D）</strong>：\(K_d\,\frac{\mathrm{d}e}{\mathrm{d}t}\)。利用误差变化率「超前」反应，可抑制超调、加快收敛，但对测量噪声敏感。</li>
         </ul>
+        <p>三者组合得到连续时间 PID 公式：</p>
+        <p>$$u(t)=K_p\,e(t)+K_i\int_0^t e(\tau)\,\mathrm{d}\tau+K_d\,\frac{\mathrm{d}e}{\mathrm{d}t}.$$</p>
+
+        <h2>离散时间形式（数字实现）</h2>
+        <p>实际多由单片机或工控机以采样周期 \(T_s\) 离散实现。记 \(t=kT_s\) 时刻的误差为 \(e_k=e(kT_s)\)，积分用矩形法近似，微分用一阶差商近似，得到：</p>
+        <p>$$u_k=K_p\,e_k+K_i\,T_s\sum_{i=0}^k e_i+K_d\,\frac{e_k-e_{k-1}}{T_s}.$$</p>
+        <p>其中 \(\sum_{i=0}^k e_i\) 为误差的累积和；\((e_k-e_{k-1})/T_s\) 为当前采样周期内的近似微分。离散 PID 是绝大多数嵌入式与工业控制器中采用的形式。</p>
+
+        <h2>调参顺序与建议</h2>
+        <ol>
+          <li><strong>先调 \(K_p\)</strong>：将 \(K_i\)、\(K_d\) 置零，仅用 P。逐步增大 \(K_p\)，使系统响应加快，但避免明显振荡或过大超调。得到较稳的 P 基础后再进行下一步。</li>
+          <li><strong>再加 \(K_i\)</strong>：若存在稳态误差，加入积分项并适当增大 \(K_i\) 以消除静差。注意 \(K_i\) 过大会导致积分饱和与超调加剧，必要时可配合抗饱和措施（如积分限幅或遇限削弱）。</li>
+          <li><strong>最后加 \(K_d\)</strong>：在 P、I 已大致合适的基础上，加入微分项。\(K_d\) 可抑制超调、加快收敛，但对噪声敏感，实际中常对误差做低通滤波后再微分，或使用不完全微分形式。</li>
+        </ol>
+
+        <h2>小结</h2>
+        <p>PID 不依赖被控对象的精确模型，仅基于误差及其积分、微分进行反馈，因此在工业中应用极广。理解每一项的物理含义与对动态的影响，再按 P → I → D 的顺序逐步整定，是教科书和工程实践中共用的做法。</p>
       </article>
     </main>
 

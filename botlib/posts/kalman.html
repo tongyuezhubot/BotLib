@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="卡尔曼滤波最小推导与机器人状态估计。" />
-    <title>卡尔曼滤波最小推导 | Robot Notes</title>
+    <meta name="description" content="卡尔曼滤波的背景、推导与工程应用建议。" />
+    <title>卡尔曼滤波 | Robot Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,33 +27,50 @@
     <header class="header">
       <a class="logo" href="../index.html">Robot Notes</a>
       <nav class="nav" aria-label="主导航">
-        <a href="../index.html">首页</a>
-        <a href="../about.html">关于博客</a>
-        <a href="./kalman.html" aria-current="page">卡尔曼滤波</a>
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
       </nav>
     </header>
 
     <main class="container">
       <article class="section prose">
         <p class="kicker">状态估计</p>
-        <h1>卡尔曼滤波最小推导</h1>
-        <p>线性高斯系统：</p>
-        <p>$$x_{t+1}=Ax_t+Bu_t+w_t,\quad z_t=Hx_t+v_t$$</p>
+        <h1>卡尔曼滤波</h1>
+
+        <h2>背景与动机</h2>
+        <p>在导航、目标跟踪、传感器融合等应用中，系统状态（如位置、速度）不能直接观测，只能通过带噪声的测量间接获得。同时，我们对状态演化的模型（如运动方程）也往往含有过程噪声。卡尔曼滤波在<strong>线性、高斯</strong>假设下，递推地给出状态的最优线性无偏估计（即后验均值），并给出估计误差的协方差矩阵，是状态估计中最基础、应用最广的方法之一。其「预测–更新」两步结构：先按动力学预测，再用新观测修正，与贝叶斯递推一致。</p>
+
+        <h2>线性高斯状态空间模型</h2>
+        <p>设离散时间状态方程与观测方程为：</p>
+        <p>$$x_{t+1}=Ax_t+Bu_t+w_t,\qquad w_t\sim\mathcal{N}(0,Q),$$</p>
+        <p>$$z_t=Hx_t+v_t,\qquad v_t\sim\mathcal{N}(0,R).$$</p>
+        <p>其中 \(x_t\) 为状态，\(u_t\) 为已知控制输入，\(z_t\) 为观测；\(w_t\)、\(v_t\) 为零均值高斯白噪声，互不相关，协方差分别为 \(Q\)、\(R\)。在以上假设下，后验 \(p(x_t\mid z_{1:t},u_{1:t})\) 仍为高斯，故只需递推其均值 \(\hat{x}_{t|t}\) 与协方差 \(P_{t|t}\)。</p>
 
         <h2>预测步</h2>
-        <p>$$\hat{x}_{t|t-1}=A\hat{x}_{t-1|t-1}+Bu_t$$</p>
-        <p>$$P_{t|t-1}=AP_{t-1|t-1}A^T+Q$$</p>
+        <p>在得到 \(t-1\) 时刻的后验 \(\hat{x}_{t-1|t-1}\)、\(P_{t-1|t-1}\) 后，按状态方程先验预测（不考虑 \(t\) 时刻观测）：</p>
+        <p>$$\hat{x}_{t|t-1}=A\hat{x}_{t-1|t-1}+Bu_t,$$</p>
+        <p>$$P_{t|t-1}=AP_{t-1|t-1}A^T+Q.$$</p>
+        <p>前者为确定性传播加零均值噪声，后者为误差协方差的传播（\(APA^T\) 为状态传播带来的不确定性，\(Q\) 为过程噪声带来的不确定性）。</p>
 
         <h2>更新步</h2>
-        <p>$$K_t=P_{t|t-1}H^T(HP_{t|t-1}H^T+R)^{-1}$$</p>
-        <p>$$\hat{x}_{t|t}=\hat{x}_{t|t-1}+K_t(z_t-H\hat{x}_{t|t-1})$$</p>
+        <p>收到观测 \(z_t\) 后，用其修正先验。定义卡尔曼增益：</p>
+        <p>$$K_t=P_{t|t-1}H^T(HP_{t|t-1}H^T+R)^{-1}.$$</p>
+        <p>后验均值与协方差为：</p>
+        <p>$$\hat{x}_{t|t}=\hat{x}_{t|t-1}+K_t(z_t-H\hat{x}_{t|t-1}),$$</p>
+        <p>$$P_{t|t}=(I-K_tH)P_{t|t-1}.$$</p>
+        <p>其中 \(z_t-H\hat{x}_{t|t-1}\) 称为<strong>创新（新息）</strong>，表示观测与预测观测的差；\(K_t\) 在「相信预测」与「相信观测」之间做最优折中（\(R\) 大时增益小更信预测，\(P_{t|t-1}\) 大时增益大更信观测）。</p>
 
         <h2>应用建议</h2>
         <ul>
-          <li>先估计测量噪声方差，固定 R。</li>
-          <li>再通过轨迹平滑度逐步调整 Q。</li>
-          <li>保存创新项 \\(z_t-H\hat{x}_{t|t-1}\\) 用于诊断。</li>
+          <li><strong>\(R\) 的设定</strong>：通常可由传感器标定或数据统计得到观测噪声方差，先固定 \(R\)。</li>
+          <li><strong>\(Q\) 的设定</strong>：过程噪声往往难以直接测量，可先设初值，再根据轨迹平滑度与滤波效果调节：\(Q\) 偏大则滤波更信任观测、响应快但可能抖动；\(Q\) 偏小则更信任模型、平滑但可能滞后。</li>
+          <li><strong>创新项</strong>：保存 \(z_t-H\hat{x}_{t|t-1}\) 的序列可用于诊断：理论上应为零均值白噪声，若明显偏离可提示模型或 \(Q\)、\(R\) 设置不当。</li>
         </ul>
+
+        <h2>小结</h2>
+        <p>卡尔曼滤波在线性高斯假设下给出状态后验的递推解，由预测步与更新步组成。理解各符号的物理含义及 \(Q\)、\(R\) 对滤波行为的影响，是正确使用与调参的基础。非线性情形可参见扩展卡尔曼滤波（EKF）与无迹卡尔曼滤波（UKF）。</p>
       </article>
     </main>
 
