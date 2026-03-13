@@ -224,6 +224,34 @@ body {
   color: var(--muted);
 }
 
+/* 点击火花特效 */
+.spark-wrap {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+
+.spark-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 1;
+  animation: spark-out 0.4s ease-out forwards;
+}
+
+@keyframes spark-out {
+  to {
+    transform: translate(var(--tx), var(--ty));
+    opacity: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .header {
     flex-direction: column;
