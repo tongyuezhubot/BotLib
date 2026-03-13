@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="模型预测控制 MPC 简述与基本形式。" />
+    <title>模型预测控制 MPC 简述 | Robot Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <p class="kicker">控制</p>
+        <h1>模型预测控制 MPC 简述</h1>
+        <p>MPC 在每步基于当前状态 \\(x_t\\) 求解有限时域最优控制问题，只执行第一个控制量，下一步重新求解。</p>
+
+        <h2>典型形式</h2>
+        <p>离散模型 \\(x_{k+1}=f(x_k,u_k)\\)，在时域 \\(N\\) 上最小化：</p>
+        <p>$$J=\sum_{k=0}^{N-1}\ell(x_k,u_k)+V_f(x_N)$$</p>
+        <p>约束 \\(x_k\in\mathcal{X}\\)，\\(u_k\in\mathcal{U}\\)，\\(x_N\in\mathcal{X}_f\\)。得到最优序列 \\(\{u_0^*,\ldots,u_{N-1}^*\}\\)，施加 \\(u_t=u_0^*\\)。</p>
+
+        <h2>特点</h2>
+        <ul>
+          <li>可显式处理状态与输入约束。</li>
+          <li>适用于非线性与多变量系统，需每步求解（非）凸优化。</li>
+          <li>预测步长 \\(N\\) 与采样周期需在计算量与性能间折中。</li>
+        </ul>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="李雅普诺夫稳定性简述与判据。" />
+    <title>李雅普诺夫稳定性简述 | Robot Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <p class="kicker">稳定性</p>
+        <h1>李雅普诺夫稳定性简述</h1>
+        <p>考虑自治系统 \\(\dot{x}=f(x)\\)，平衡点 \\(x_e\\) 满足 \\(f(x_e)=0\\)。</p>
+
+        <h2>李雅普诺夫直接法</h2>
+        <p>若存在连续可微的 \\(V(x)\\) 满足：</p>
+        <ul>
+          <li>\\(V(x_e)=0\\)，且在 \\(x_e\\) 某邻域内 \\(V(x)>0\\)（正定）；</li>
+          <li>\\(\dot{V}(x)=\frac{\partial V}{\partial x}f(x)\le 0\\)（半负定），</li>
+        </ul>
+        <p>则平衡点 \\(x_e\\) 李雅普诺夫稳定；若 \\(\dot{V}(x)<0\\)（负定）且 \\(V\\) 正定，则 \\(x_e\\) 渐近稳定。</p>
+
+        <h2>线性系统 \\(\dot{x}=Ax\\)</h2>
+        <p>取 \\(V(x)=x^TPx\\)，\\(P=P^T>0\\)，则</p>
+        <p>$$\dot{V}=x^T(A^TP+PA)x=-x^TQx$$</p>
+        <p>若对给定 \\(Q>0\\) 存在 \\(P>0\\) 满足 Lyapunov 方程 \\(A^TP+PA=-Q\\)，则原点渐近稳定（等价于 \\(A\\) 特征值均在左半平面）。</p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

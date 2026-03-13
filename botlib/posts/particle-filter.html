@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="粒子滤波简介与基本步骤。" />
+    <title>粒子滤波简介 | Robot Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <p class="kicker">状态估计</p>
+        <h1>粒子滤波简介</h1>
+        <p>粒子滤波用一组带权粒子 \\(\{x_t^{(i)},w_t^{(i)}\}\\) 近似后验 \\(p(x_t|z_{1:t})\\)，适用于非线性、非高斯系统。</p>
+
+        <h2>递推步骤</h2>
+        <ol>
+          <li><strong>预测</strong>：由 \\(p(x_t|x_{t-1})\\) 采样得到 \\(x_t^{(i)}\\)。</li>
+          <li><strong>更新</strong>：权重 \\(w_t^{(i)}\propto w_{t-1}^{(i)}\,p(z_t|x_t^{(i)})\\)，再归一化。</li>
+          <li><strong>重采样</strong>：按权重重采样，避免粒子退化。</li>
+        </ol>
+
+        <h2>要点</h2>
+        <ul>
+          <li>粒子数 \\(N\\) 越大估计越稳，但计算量线性增加。</li>
+          <li>重采样可选用系统重采样或残差重采样，有效粒子数 \\(N_{\mathrm{eff}}\\) 过小时触发。</li>
+          <li>与卡尔曼滤波对比：无需线性与高斯假设，但计算成本更高。</li>
+        </ul>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>
