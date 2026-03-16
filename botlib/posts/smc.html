@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="滑模控制的背景、滑模面设计、等效控制与抖振。" />
+    <title>滑模控制 | Robot Notes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+          processEscapes: true,
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body class="article-page">
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <aside class="article-sidebar" id="article-sidebar" aria-label="学习路线"></aside>
+
+    <main class="container">
+      <article class="section prose">
+        <p class="kicker">控制</p>
+        <h1>滑模控制</h1>
+
+        <h2>背景与动机</h2>
+        <p>在存在模型不确定性与外部扰动时，希望控制系统仍能可靠地达到目标，是控制工程中的核心挑战之一。<strong>滑模控制</strong>（Sliding Mode Control, SMC）是一种非线性控制方法：先在状态空间中定义一条「理想路径」——<strong>滑模面</strong> \(s=0\)，再通过通常为<strong>不连续</strong>的控制律，迫使系统在有限时间内进入并保持在该面上。一旦系统「滑」在 \(s=0\) 上，其运动由滑模面的设计唯一决定，从而对满足一定条件的扰动具有<strong>不变性</strong>（鲁棒性）。代价是控制切换会引发实际执行器上的<strong>抖振</strong>，工程中常用边界层或高阶滑模等方式缓解。</p>
+
+        <h2>滑模面：把期望动态嵌成约束</h2>
+        <p>滑模面不应只规定「误差为零」，而应规定我们希望强制的<strong>动态关系</strong>。例如对二阶系统，可取 \(s=\dot{e}+\lambda e=0\)（\(\lambda&gt;0\)），即误差满足一阶衰减 \(\dot{e}=-\lambda e\)，从而指数收敛到零。一般地，对 \(n\) 阶系统可定义含误差及其前 \(n-1\) 阶导数的滑模面，使控制 \(u\) 出现在 \(\dot{s}\) 中，从而能通过 \(u\) 影响 \(s\) 的演化。</p>
+
+        <h2>趋近与等效控制</h2>
+        <p>控制律常分两部分：</p>
+        <ul>
+          <li><strong>趋近</strong>：当 \(s\neq 0\) 时，用强切换（如 \(u=-k\,\mathrm{sgn}(s)\)）在有限时间内把状态驱赶到 \(s=0\)。</li>
+          <li><strong>等效控制</strong> \(u_{\mathrm{eq}}\)：为使系统一旦在 \(s=0\) 上时保持 \(\dot{s}=0\) 所需的（理想连续）控制，由 \(\dot{s}=0\) 解出。</li>
+        </ul>
+        <p>完整控制可取 \(u=u_{\mathrm{eq}}-k\,\mathrm{sgn}(s)\)。对与控制<strong>匹配</strong>的扰动，在滑模面上等效控制会自动抵消该扰动，系统在 \(s=0\) 上的运动不受其影响（不变性）。</p>
+
+        <h2>抖振与缓解</h2>
+        <p>理想 SMC 要求控制瞬时切换，实际执行器有惯性、延迟，无法无限快切换，导致状态在 \(s=0\) 附近高频小幅振荡，即<strong>抖振</strong>。常用办法：</p>
+        <ul>
+          <li><strong>边界层</strong>：在 \(|s|\leq\Phi\) 内用连续近似（如 \(u\propto s/\Phi\)）替代 \(\mathrm{sgn}(s)\)，减小抖振，但会引入有界稳态误差。</li>
+          <li><strong>高阶滑模</strong>：设计使 \(s\) 在有限时间内趋于零、但控制 \(u\) 连续的律（不连续推到 \(\dot{u}\)），从源头减轻抖振。</li>
+        </ul>
+
+        <h2>小结</h2>
+        <p>滑模控制通过滑模面设计植入期望动态，再借不连续控制实现趋近与保持，从而对匹配扰动具有强鲁棒性；理解滑模面、等效控制与抖振的取舍，是将其用于机器人、电机等实际系统的基础。更多可参考<a href="https://waf-www-bohrium-com-hngfcxduded0fmhr.a03.azurefd.net/sciencepedia/feynman/keyword/sliding_mode" target="_blank" rel="noopener">SciencePedia 滑模控制</a>。</p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

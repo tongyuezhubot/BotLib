@@ -23,7 +23,7 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
   </head>
-  <body>
+  <body class="article-page">
     <header class="header">
       <a class="logo" href="../index.html">Robot Notes</a>
       <nav class="nav" aria-label="主导航">
@@ -34,13 +34,15 @@
       </nav>
     </header>
 
+    <aside class="article-sidebar" id="article-sidebar" aria-label="学习路线"></aside>
+
     <main class="container">
       <article class="section prose">
         <p class="kicker">控制</p>
         <h1>PID 控制</h1>
 
         <h2>背景与动机</h2>
-        <p>在运动控制、温控、液位控制等场合，我们常需要让某个被控量（如电机角度、温度、水位）跟踪给定的设定值。系统往往存在惯性、延迟或未知扰动，若仅根据当前误差按比例放大后作为控制量，容易产生振荡或稳态误差。PID 控制是在比例控制（P）的基础上，加入对误差累积（积分 I）与误差变化率（微分 D）的利用，从而在工程上以简单结构实现「减小误差、抑制超调、消除静差」的目标。</p>
+        <p>在运动控制、温控、液位控制等场合，我们常需要让某个被控量（如电机角度、温度、水位）跟踪给定的设定值。系统往往存在惯性、延迟或未知扰动，若仅根据当前误差按比例放大后作为控制量，容易产生振荡或稳态误差。PID 控制是在比例控制（P）的基础上，加入对误差累积（积分 I）与误差变化率（微分 D）的利用，从而在工程上以简单结构实现「减小误差、抑制<a href="https://waf-www-bohrium-com-hngfcxduded0fmhr.a03.azurefd.net/sciencepedia/feynman/keyword/overshoot" target="_blank" rel="noopener">超调</a>、消除静差」的目标。</p>
 
         <h2>误差的定义</h2>
         <p>设 \(r(t)\) 为设定值（参考输入），\(y(t)\) 为被控量（系统输出）。误差定义为</p>
@@ -70,7 +72,7 @@
         </ol>
 
         <h2>小结</h2>
-        <p>PID 不依赖被控对象的精确模型，仅基于误差及其积分、微分进行反馈，因此在工业中应用极广。理解每一项的物理含义与对动态的影响，再按 P → I → D 的顺序逐步整定，是教科书和工程实践中共用的做法。</p>
+        <p>PID 不依赖被控对象的精确模型，仅基于误差及其积分、微分进行反馈，因此在工业中应用极广。</p>
       </article>
     </main>
 
