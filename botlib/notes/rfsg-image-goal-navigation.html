@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="RFSG：图像目标导航 — 细粒度特征引导、无参数自蒸馏、场景图 GCN，ResNet9 + Actor-Critic"
+    />
+    <title>RFSG 图像目标导航 | 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>图像目标导航：细粒度特征引导与场景图增强（RFSG）</h1>
+        <p>
+          <em>Image-Goal Navigation Using Refined Feature Guidance and Scene Graph Enhancement</em>（<strong>RFSG</strong>）
+        </p>
+        <p>
+          <strong>图像目标导航（Image-Goal Navigation）：</strong>无全局地图、无 GPS，仅给定一张<strong>目标场景照片</strong>，机器人依靠机载相机观测，逐步走到与目标一致的可视位置。本文在<strong>低开销</strong>（如 RTX 3080 上约 <strong>53.5 FPS</strong>）下，结合注意力式特征融合、自蒸馏与图结构记忆，将性能推到同期 SOTA 水平。
+        </p>
+
+        <h2>一、动机与痛点（Motivation）</h2>
+        <ul>
+          <li>
+            <strong>特征融合过粗：</strong>不少 RL 导航方法将目标图与当前观测的特征简单<strong>拼接（Concat）</strong>，难以显式强调「当前画面中与目标相似的区域」。
+          </li>
+          <li>
+            <strong>长程环境易忘：</strong>大场景内需某种<strong>记忆</strong>；若记忆模块过重，推理变慢。
+          </li>
+          <li>
+            <strong>轻主干 vs 语义能力：</strong>为速度采用很浅的 <strong>ResNet9</strong>，高层语义表征能力相对受限，需用结构设计补偿。
+          </li>
+        </ul>
+
+        <h2>二、网络结构与核心公式（Methodology）</h2>
+        <p>在 <strong>ResNet9</strong> 与 <strong>Actor-Critic</strong> RL 之间插入三块核心模块。</p>
+
+        <h3>1. 细粒度特征引导（Refined Feature Guidance）</h3>
+        <p>
+          使用<strong>权重解耦模块（WDM）</strong>与<strong>空间–通道注意力（SCA）</strong>，替代单纯拼接。目标特征 \(X_{\mathrm{goal}}\) 与观测特征 \(X_{\mathrm{observe}}\) 的融合写为（\(\cup\) 表示论文中的融合算子，如拼接后再映射等，以原文为准）：
+        </p>
+        <p>
+          $$
+          Y = W_1 \cdot X_{\mathrm{observe}} \,\cup\, W_2 \cdot X_{\mathrm{goal}}
+          $$
+        </p>
+        <p>权重由仿射式组合得到：多分支分别产生通道权重 \(A\)、空间权重 \(x\) 与偏置 \(b\)，</p>
+        <p>
+          $$
+          W = A \cdot x + b
+          $$
+        </p>
+        <p>
+          直观上，目标特征起到类似<strong>动态滤波器</strong>的作用，对当前观测的通道与空间位置进行选择性增强，突出与导航相关的区域。
+        </p>
+
+        <h3>2. 零参数自蒸馏（Parameter-free Self-distillation）</h3>
+        <p>
+          训练时让浅层特征 \(I_s\) 的<strong>注意力分布</strong>对齐深层特征 \(I_d\)（深层分支<strong>不反传梯度</strong>）。先用 <strong>Space-to-Depth</strong> 等使空间尺寸一致；再用 <strong>SimAM</strong> 得到 3D 权重矩阵 \(M_S\)、\(M_D\)。蒸馏项用与余弦相似度互补的形式（对展平后的矩阵可做 Frobenius 内积意义下的余弦相似）：
+        </p>
+        <p>
+          $$
+          L_{\mathrm{dis}} = 0.2 \times (L_{C1} + L_{C2}), \qquad L_C = 1 - \frac{M_S \cdot M_D}{\lVert M_S \rVert_F \, \lVert M_D \rVert_F}
+          $$
+        </p>
+        <p>
+          <strong>推理阶段</strong>不跑教师分支，故<strong>不增加在线计算</strong>；SimAM 本身无额外可学习参数，整体强调「零参数」蒸馏路径的轻量性。
+        </p>
+
+        <h3>3. 图像场景图（Image Scene Graph）</h3>
+        <p>
+          引入 <strong>YOLOv5</strong> 做目标检测，与 ResNet9 全局特征一起构成图<strong>节点</strong>：拼接全局特征与物体归一化位置 \(O_{\mathrm{loc}}\)、类别 \(O_{\mathrm{class}}\)、置信度 \(O_{\mathrm{conf}}\) 等，得到节点表征 \(F_{\mathrm{Node}}\)。
+        </p>
+        <p>邻接权重由节点特征余弦相似度给出：</p>
+        <p>
+          $$
+          G_{i,j} = \frac{F_{\mathrm{Node}_i} \cdot F_{\mathrm{Node}_j}}{\lVert F_{\mathrm{Node}_i} \rVert \, \lVert F_{\mathrm{Node}_j} \rVert}
+          $$
+        </p>
+        <p>再用 <strong>三层 GCN</strong> 聚合历史节点，输出带环境记忆的 \(H_{\mathrm{graph}}\)，供策略使用。</p>
+
+        <h2>三、实验要点（Experiments）</h2>
+        <ul>
+          <li>
+            <strong>平台与数据：</strong><strong>Habitat</strong> 仿真、<strong>Gibson</strong> 等；指标含 <strong>SR（成功率）</strong>、<strong>SPL（路径加权成功率）</strong>。
+          </li>
+          <li>
+            <strong>主结果：</strong>仅以 ResNet9 为骨干时，<strong>SR \(\approx 91.0\%\)</strong>，<strong>SPL \(\approx 67.8\%\)</strong>。对比更深骨干的 OVRL-V2（如 ResNet50 / ViT）SPL 约 <strong>58.7\%</strong>，说明「细粒度融合 + 场景图」优于单纯加深网络。
+          </li>
+          <li>
+            <strong>零样本泛化：</strong>Gibson 上训练后<strong>不经微调</strong>在 <strong>HM3D</strong> 上测试，仍约 <strong>73.4\% SR</strong>、最高约 <strong>42.7\% SPL</strong>，优于对比基线。
+          </li>
+          <li>
+            <strong>速度：</strong>端到端在 <strong>RTX 3080</strong> 上约 <strong>18.7 ms/帧（\(\sim\)53.5 FPS）</strong>；<strong>CPU（i9-12900）</strong> 上约 <strong>28.4 FPS</strong>，满足许多实车帧率需求。
+          </li>
+        </ul>
+
+        <h2>四、Takeaway</h2>
+        <p>
+          在算力受限的移动平台上，不必一味堆 ViT/ResNet50：<strong>仿射式特征融合、无参数自蒸馏、轻量场景图 + GCN</strong> 可把浅主干压榨到接近甚至超过深主干的导航指标，同时保持高帧率。与 <a href="./rl.html">强化学习笔记目录</a>中的策略梯度方法可对照阅读（Actor-Critic + 表征学习）。
+        </p>
+
+        <!-- <h2>五、参考</h2>
+        <p>
+          <em>Image-Goal Navigation Using Refined Feature Guidance and Scene Graph Enhancement</em>（RFSG）—
+          作者、会议/期刊、DOI、arXiv 请以正式出版信息为准并在此补全。
+        </p> -->
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

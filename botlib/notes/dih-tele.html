@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="DIH-Tele：多物体灵巧手内操作与触觉感知框架 — 动机、系统、CVAE 模仿学习与实验"
+    />
+    <title>DIH-Tele 多物体灵巧手内操作与触觉感知 | 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>DIH-Tele：多物体灵巧手内操作与触觉感知框架</h1>
+        <p>
+          本文概括该工作如何解决<strong>多物体手内操作</strong>中视觉失效与触觉
+          Sim-to-Real 困难，并通过<strong>真实世界遥操作采集多模态数据 + 模仿学习（含 CVAE）</strong>形成闭环。
+        </p>
+
+        <h2>一、研究动机（Motivation）</h2>
+        <h3>背景</h3>
+        <p>
+          现有灵巧手操作多数仍停留在<strong>单物体</strong>层面（例如转动单一圆柱体）。<strong>多物体手内操作（Multi-object
+          In-hand Manipulation）</strong>被普遍视为难点之一：例如掌中握有多颗小物体，仅靠手指拨动将其中若干剔除或重排。
+        </p>
+        <h3>核心痛点</h3>
+        <ul>
+          <li>
+            <strong>视觉遮挡严重：</strong>多物体在掌内相互挤压时，外部相机（Vision）可观测性急剧下降，难以依赖纯视觉闭环。
+          </li>
+          <li>
+            <strong>触觉仿真困难（Sim-to-Real）：</strong>常见物理仿真器（如 Isaac Gym 等）难以逼真复现软体形变与高保真触觉反馈；在仿真中用强化学习（RL）学到的触觉策略，往往难以直接迁移到真实硬件。
+          </li>
+        </ul>
+        <h3>思路概览</h3>
+        <p>
+          若仿真难以提供可信触觉，则转向<strong>真实世界</strong>：通过<strong>遥操作（Teleoperation）</strong>让人类穿戴传感装置进行演示，采集真实的<strong>多模态数据</strong>，再用<strong>模仿学习（Imitation Learning）</strong>训练策略网络，绕开对触觉仿真器的强依赖。
+        </p>
+
+        <h2>二、硬件与系统设计（System Setup）</h2>
+        <p>算法之前需要可复现、高质量的数据采集系统。</p>
+        <ul>
+          <li>
+            <strong>执行端：</strong>定制灵巧手 <strong>T-DexCo</strong>（Tactile Dexterous and Compliant
+            Hand）— 兼顾较高自由度与柔顺性，指尖集成<strong>高分辨率视觉触觉传感器</strong>，在接触时记录形变/纹理类图像。
+          </li>
+          <li>
+            <strong>遥操作接口：</strong>构建人手到机械手的高精度映射（<strong>Kinematic Retargeting</strong>）。操作者在穿戴设备上动作，机械手实时跟随；在指尖接触物体时同步记录真实触觉图像，形成视觉 + 触觉 + 本体感受对齐的数据流。
+          </li>
+        </ul>
+
+        <h2>三、核心深度学习算法（Methodology）</h2>
+        <p>整体为<strong>多模态模仿学习</strong>路线，而非在仿真中做复杂 RL 探索。</p>
+
+        <h3>1. 观测与动作定义</h3>
+        <ul>
+          <li>
+            <strong>观测（Observation）：</strong>多模态融合 — 机器人<strong>本体感受（Proprioception）</strong>（如关节角等）、<strong>视觉图像</strong>，以及核心的<strong>触觉特征图像（Tactile Images）</strong>。
+          </li>
+          <li>
+            <strong>动作（Action）：</strong>下一时刻各关节的运动指令。论文采用<strong>离散控制空间（Discrete Control
+            Space）</strong>：将连续关节目标划分为多个离散“桶（bins）”，以降低过拟合、提高预测稳定性（与近年 Robot Learning 中离散化动作的经验一致）。
+          </li>
+        </ul>
+
+        <h3>2. 条件变分自编码器（CVAE）</h3>
+        <p>
+          人类演示在相同状态下可能存在多种合理拨动手法，即<strong>多模态 / 多峰性</strong>。CVAE 用隐变量刻画这种多样性。
+        </p>
+        <p><strong>训练阶段：</strong>编码器（Encoder）接收当前<strong>动作序列</strong>与<strong>机器人本体状态</strong>，映射到隐空间并预测隐变量 \(z\) 的均值与方差：</p>
+        <p>
+          $$
+          z \sim \mathcal{N}(\mu, \sigma^2)
+          $$
+        </p>
+        <p>
+          解码器（Decoder）在<strong>环境观测条件</strong>下从 \(z\) 重建动作序列。损失通常包含<strong>重建损失（Reconstruction
+          Loss）</strong>与<strong>KL 散度（KL Divergence）</strong>项，以正则化后验接近先验并保证可生成性。
+        </p>
+        <p>
+          <strong>推理阶段：</strong>部署时主要使用解码器。从先验（或约定）的高斯分布中采样 \(z\)，结合当前视觉与触觉等观测，生成下一步离散动作指令。
+        </p>
+
+        <h3>3. 融合训练（Fused Training）</h3>
+        <p>
+          缓解<strong>模态坍塌</strong>：避免网络仅依赖易学的视觉而忽略触觉。作者通过<strong>特征对齐</strong>与<strong>Dropout</strong>等机制，促使模型在决策中利用触觉中的接触几何、按压深度、摩擦分布等信息。
+        </p>
+
+        <h2>四、实验设计与结论（Experiments &amp; Results）</h2>
+        <ul>
+          <li>
+            <strong>核心任务：</strong><strong>手内计数（In-hand Counting）</strong> — 掌中握有多个小方块，通过手指精细挪动将多余方块逐次挤出，直至保留规定数量。
+          </li>
+          <li>
+            <strong>消融（Ablation）：</strong>去掉触觉（w/o Tactile）后成功率显著下降，说明在视觉盲区下，触觉提供的接触面法向/切向等信息至关重要。
+          </li>
+          <li>
+            <strong>训练范式：</strong>验证<strong>离散动作空间 + 融合训练</strong>相较传统连续动作输出的优势。
+          </li>
+          <li>
+            <strong>结论：</strong>DIH-Tele 框架强调真实触觉与遥操作数据，在高度依赖触觉的多物体手内操作上取得接近人类遥操作水平的成功率。
+          </li>
+        </ul>
+
+        <h2>五、参考</h2>
+        <p>
+          J. Huang et al., "DIH-Tele: Dexterous In-Hand Teleoperation Framework for Learning Multiobjects Manipulation With Tactile Sensing," in IEEE/ASME Transactions on Mechatronics, vol. 30, no. 5, pp. 3840-3851, Oct. 2025,
+        </p>
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

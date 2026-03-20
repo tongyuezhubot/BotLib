@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="折纸万能抓手：形态学计算、参数化与逆向设计，及其与多模态大模型、灵巧手的对比"
+    />
+    <title>折纸万能抓手：设计与优化 | 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+    <style>
+      .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+        margin: 0.75rem 0 1rem;
+      }
+      .compare-table th,
+      .compare-table td {
+        border: 1px solid var(--line);
+        padding: 0.5rem 0.6rem;
+        vertical-align: top;
+        text-align: left;
+      }
+      .compare-table th {
+        background: #f8f8f6;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>折纸万能抓手：设计与优化（Origami Gripper）</h1>
+        <p>
+          <em>Design and Optimization of an Origami Gripper for Versatile Grasping and Manipulation</em>
+        </p>
+        <p>
+          笔记侧重把「折纸结构 + 逆向设计」和深度学习里的<strong>参数化、降维、损失优化</strong>做对照，并联系到多模态大模型与
+          <a href="./dih-tele.html">灵巧手遥操作（DIH-Tele）</a> 的差异。
+        </p>
+
+        <h2>一、核心概念：柔性机器人与形态学计算</h2>
+        <p>
+          在深度学习中，我们常把难题交给复杂神经网络（「大脑」）。但在机器人里，与物理世界直接接触的是<strong>躯体（Body）</strong>。
+        </p>
+        <p>
+          <strong>形态学计算（Morphological Computation）：</strong>通过机械结构与材料特性，把一部分「该算的东西」交给身体完成，从而减轻控制与感知的负担——让<strong>身体分担大脑的计算压力</strong>。
+        </p>
+        <p>
+          <strong>本文背景：</strong>受折纸（Origami）启发，设计一种<strong>通用型抓手</strong>：不必像人手那样五根手指加大量驱动，却能抓取极软、极滑、易碎乃至颗粒状等难抓物体。
+        </p>
+
+        <h2>二、论文深度拆解：折纸抓手的「硬件算法化」</h2>
+        <p>
+          亮点在于设计不是纯试错，而是用<strong>可计算的数学模型</strong>驱动几何设计；思路上与「训练模型」类似：有参数、有目标、有优化。
+        </p>
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th scope="col">论文创新点</th>
+              <th scope="col">深度学习视角的对应说法</th>
+              <th scope="col">带来的优势</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>折纸参数化（Parameterization）</strong></td>
+              <td>
+                将抓手几何抽象为参数向量 \(\theta\)（如折痕角 \(\gamma\)、边长等），类比网络中的<strong>权重参数</strong>。
+              </td>
+              <td>把复杂物理变形问题转成可用矩阵与数值方法处理的优化问题。</td>
+            </tr>
+            <tr>
+              <td><strong>单轴驱动（Uniaxial Actuation）</strong></td>
+              <td>
+                将包裹、捏取等复杂运动压缩为<strong>一维（1-DoF）推拉</strong>，类似在输出端做极端<strong>降维（Dimensionality
+                Reduction）</strong>。
+              </td>
+              <td>
+                控制与学习的输出空间极小（例如只需「拉多少厘米」一个标量），大幅降低学习或规划难度。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>逆向设计优化（Inverse Design）</strong></td>
+              <td>
+                给定目标（如最大抓取力等），反推最优 \(\theta\)；相当于定义<strong>目标函数 / Loss</strong>，用优化器搜索最优参数。
+              </td>
+              <td>抓手可<strong>按场景定制</strong>：对不同工业需求，算法自动给出更合适的折痕角等几何量。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>三、折纸硬件如何与「大模型」结合</h2>
+        <h3>1. 为多模态大模型提供物理容错</h3>
+        <p>
+          类似 ReasonManip 类工作：大模型预测的末端位姿很难始终达到毫米级精度。若末端换成<strong>折纸柔性抓手</strong>，其<strong>被动柔顺（Passive
+          Compliance）</strong>使接触时结构发生形变、自适应包覆；即使预测偏差在厘米量级，仍有机会稳定包住物体。
+        </p>
+        <p>
+          可理解为：在 AI 预测误差前加了一层<strong>物理层面的鲁棒性</strong>，降低对模型精度的苛刻要求，有利于落地。
+        </p>
+        <h3>2. 软硬协同优化（Co-optimization of Hardware and Policy）</h3>
+        <p>
+          常见分工是硬件团队与算法团队各做各的；更长远方向是<strong>联合设计</strong>：例如在仿真里把折纸几何参数 \(\theta\) 与控制策略一并当作可学习或可优化变量，让策略与结构在任务目标下<strong>协同演化</strong>（概念上接近 RL 环境与本体同时参与优化，具体实现依仿真与制造约束而定）。
+        </p>
+
+        <h2>四、问答速记</h2>
+        <h3>折纸抓手相对灵巧手（Dexterous Hand）的最大优势？</h3>
+        <p>
+          <strong>控制降维与鲁棒性。</strong>灵巧手往往有二十余关节，易遭遇维度灾难，且常依赖高分辨率触觉与精细控制（参见
+          <a href="./dih-tele.html">DIH-Tele</a> 路线）。折纸抓手用<strong>单轴驱动 + 结构柔顺</strong>完成包覆，牺牲指尖级「灵巧操作」，换取更高的<strong>抓取成功率、系统简单性与算力/控制负担的节约</strong>。
+        </p>
+        <h3>本文逆向优化 vs 深度学习中的 Loss 优化？</h3>
+        <p>
+          <strong>相同点：</strong>数学上都是<strong>目标函数极值</strong>问题——在约束下最小化/最大化某个标量目标。
+        </p>
+        <p>
+          <strong>不同点：</strong>深度学习通常在极高维、强非凸空间优化百万级参数，依赖<strong>反向传播</strong>估计梯度；本文逆向设计面对的是<strong>低维几何与物理参数</strong>，更接近<strong>约束非线性规划</strong>或物理仿真驱动的优化。二者都是「用算法找更优解」，但变量维度、可微性与求解器习惯不同。
+        </p>
+
+        <h2>五、参考</h2>
+        <p>
+          <em>Cao, H., Zhou, J., Chen, K., He, Q., Dou, Q. and Liu, Y. (2024). Design and Optimization of an Origami Gripper for Versatile Grasping and Manipulation. Advanced Intelligent Systems. doi:https://doi.org/10.1002/aisy.202400271.</em>
+        </p>
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

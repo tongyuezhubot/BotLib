@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="ReasonManip：激励多模态大模型推理以直接操控机器人 — 轴向空间表示、SFT、GRPO"
+    />
+    <title>ReasonManip 大模型推理式机械臂操控 | 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>ReasonManip：激励大模型多模态推理以直接操控机器人</h1>
+        <p>
+          <em>INCENTIVIZING MULTIMODAL REASONING IN LARGE MODELS FOR DIRECT ROBOT MANIPULATION</em>
+        </p>
+        <p>
+          将 <strong>LLM / LMM</strong> 与机械臂底层控制衔接的前沿思路：<strong>不显式训练传统 Action Head 或黑盒端到端 VLA</strong>，而是让模型以 <strong>System-2 式慢推理</strong>（算术、几何与逻辑）在<strong>自然语言或可解析结构</strong>中给出下一步 <strong>6D 位姿</strong>等量。下文按动机、方法与实验整理。
+        </p>
+
+        <h2>一、动机与痛点（Motivation）</h2>
+        <ul>
+          <li>
+            <strong>VLA 的「快思考」局限：</strong>典型视觉–语言–动作模型（如 RT-1、OpenVLA）多属 <strong>System-1</strong>：图像直接映到动作，深层推理弱，<strong>OOD</strong> 场景易失效。
+          </li>
+          <li>
+            <strong>欧拉角 / 四元数对 LLM 不友好：</strong>直接输出姿态若用大量 \(\sin/\cos\) 与角域缠绕，模型易产生<strong>数值幻觉</strong>与符号错误。
+          </li>
+          <li>
+            <strong>系统级能力：</strong>希望模型在「出手」前能进行<strong>碰撞预判、失败分析与自纠错</strong>等，而不仅是单步回归。
+          </li>
+        </ul>
+
+        <h2>二、核心方法（Methodology）</h2>
+
+        <h3>1. 轴向空间表示（Axis-based Spatial Representation）</h3>
+        <p>
+          放弃以欧拉角为主的三维旋转参数化，改用<strong>三个正交单位向量</strong>描述朝向；物体与机械臂位姿在统一框架下编码。常见记法包括位置 \((x,y,z)\)、外廓尺寸 \((l,w,h)\)，以及三组轴（示例记号与论文一致时采用原文）：
+        </p>
+        <ul>
+          <li>\((x_a,y_a,z_a)\)：<strong>纵向轴</strong>（如物体最长方向或夹爪指向）；</li>
+          <li>\((x_b,y_b,z_b)\)：<strong>副法向轴</strong>（如夹爪开合方向）；</li>
+          <li>\((x_n,y_n,z_n)\)：<strong>法向轴</strong>（如贴合面法向）。</li>
+        </ul>
+        <p>
+          <strong>动机（与预训练对齐）：</strong>LLM 语料中向量加减、<strong>叉乘</strong>等比三角恒等更「自然」。例如法向可由 \(\mathbf{a} \times \mathbf{b}\)（再归一化）得到，便于链式推理，减少纯三角函数链路上的错误。
+        </p>
+        <p>
+          <small>注：若将上述标量全部展开，维度为 \(3{+}3{+}3{\times}3\)；组会材料中「12 维」以论文最终定义为准。</small>
+        </p>
+
+        <h3>2. 第一阶段：小规模高质量 SFT</h3>
+        <ul>
+          <li>
+            <strong>数据：</strong>以开源多模态大模型 <strong>Qwen2.5-VL-72B</strong> 在仿真中、在人类短提示（如「继续」「调角度」）下试错，构造约 <strong>65 条</strong>多轮推理对话，而非数十万条示教轨迹。
+          </li>
+          <li>
+            <strong>微调：</strong>用该数据监督微调较小模型（如 <strong>7B</strong>），学习 <strong>CoT</strong> 格式：<strong>场景分析 → 碰撞与可行性 → 向量几何 → 输出下一步位姿</strong>。
+          </li>
+        </ul>
+
+        <h3>3. 第二阶段：GRPO 强化学习（Group Relative Policy Optimization）</h3>
+        <p>
+          在仿真中对<strong>同一任务</strong>并行采样 <strong>\(K\)</strong> 条不同推理–控制轨迹；<strong>稀疏奖励</strong>：仅当任务成功时 \(r=1\)，否则 \(0\)。在组内根据 \(K\) 条结果的统计构造<strong>相对优势</strong> \(\hat{A}_k\)，驱使策略偏向能导向成功的推理与数值推导。
+        </p>
+        <p>目标在精神上接近「组内归一优势 + 带裁剪的策略比率」，与 PPO 同属信赖域族；示意写法（时间步 / token 级求和与系数以原文为准）：</p>
+        <p>
+          $$
+          \mathcal{L}_{\mathrm{GRPO}}(\theta)
+          = \mathbb{E}\left[
+          \frac{1}{K}\sum_{k=1}^{K}
+          \min\!\left(
+          \rho_k\,\hat{A}_k,\;
+          \mathrm{clip}(\rho_k,\,1-\epsilon,\,1+\epsilon)\,\hat{A}_k
+          \right)
+          \right]
+          $$
+        </p>
+        <p>
+          其中 \(\rho_k\) 为第 \(k\) 条轨迹上新旧策略概率比（或论文采用的等价形式），\(\hat{A}_k\) 由组内回报相对基线（如组均值、方差）得到。<strong>旧策略采样、对新策略优化</strong>的套路与 <a href="./ppo.html">PPO</a> 笔记中的裁剪思想可对照阅读。
+        </p>
+        <p>
+          <strong>效果直觉：</strong>将死板模仿扩展为在成功/失败信号下<strong>探索何种几何推理链更可靠</strong>，强化与物理不变量（如法向对齐）一致的行为，而非死记像素统计。
+        </p>
+
+        <h2>三、实验与结果（Experiments）</h2>
+        <ul>
+          <li>
+            <strong>数据效率（SIMPLER，7 项任务）：</strong>仅 <strong>65 条 SFT + GRPO</strong>，平均成功率约 <strong>45.4%</strong>；对比 OpenVLA 约 <strong>14.0%</strong>（其训练规模通常远大于此）。
+          </li>
+          <li>
+            <strong>OOD 零样本（MetaWorld）：</strong>在 SIMPLER 训练后<strong>无微调</strong>迁移到物理与渲染均不同的 MetaWorld；RT-1-X、OpenVLA 等报告为 <strong>0%</strong>，而 ReasonManip（SFT+GRPO）在抓取类任务上约 <strong>96.7%</strong>。
+          </li>
+          <li>
+            <strong>视角鲁棒性：</strong>更换相机视角后成功率仍高（如 View 1 约 96.7% → View 2 达 <strong>100%</strong>），与「学几何常识而非单一视角纹理」的解释一致。
+          </li>
+        </ul>
+
+        <h2>四、Takeaway</h2>
+        <p>
+          <strong>表示层</strong>与 LLM 预训练能力对齐（向量与叉乘优于硬写欧拉角）；<strong>学习层</strong>用小而精的 SFT 定型 CoT，再用 <strong>GRPO</strong> 用稀疏成功信号放大可靠推理。与纯端到端 VLA 形成互补视角。末端位姿仍难毫米级精确时，可与 <a href="./origami-gripper.html">被动柔顺末端（如折纸抓手）</a>等硬件思路一起考虑鲁棒性。
+        </p>
+
+        <!-- <h2>五、参考</h2>
+        <p>
+          <em>INCENTIVIZING MULTIMODAL REASONING IN LARGE MODELS FOR DIRECT ROBOT MANIPULATION</em>（ReasonManip）—
+          作者、会议/期刊、DOI、arXiv 请以正式出版信息为准并在此补全。
+        </p> -->
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

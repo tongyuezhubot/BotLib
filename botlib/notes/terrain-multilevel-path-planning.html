@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="大规模崎岖多层地形实时路径规划：NDT 体素地形分析、ZMP 与支撑多边形、履带+鳍片机器人"
+    />
+    <title>多层地形感知路径规划 | 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>Real-Time Multilevel Terrain-Aware Path Planning for Ground Mobile Robots in Large-Scale Rough Terrains</h1>
+        <p>
+          <em>Real-Time Multilevel Terrain-Aware Path Planning for Ground Mobile Robots in Large-Scale Rough
+            Terrains</em>
+        </p>
+        <p>
+          问题非常工程化：<strong>带履带与辅助鳍（Flippers）</strong>的机器人在野外坑洼、废墟乃至<strong>多层建筑</strong>中，如何规划路径才能<strong>既快又不翻车</strong>。下文按动机、算法与实验拆解。
+        </p>
+
+        <h2>一、Motivation</h2>
+        <h3>痛点 1：地图维度的局限</h3>
+        <p>
+          许多方法依赖 <strong>2.5D 高程图（Elevation Map）</strong>（类似在地形上罩一层高度场）。这类表示难以正确处理<strong>桥洞、多层楼梯</strong>等真正的 <strong>3D 多层结构</strong>。
+        </p>
+        <h3>痛点 2：过度简化导致失稳</h3>
+        <p>
+          为追求速度，常有做法把履带车<strong>骨架化</strong>成少数线段/简化模型。在碎石废墟等场景里，<strong>接触点</strong>估计稍有偏差，就可能导致<strong>重心判断错误</strong>进而翻车。
+        </p>
+
+        <h2>二、核心算法与关键公式（Methodology）</h2>
+        <p>整体为<strong>双层架构</strong>：<strong>全局层</strong>（在大地图里算可通行性与路径）+ <strong>局部层</strong>（调整履带/鳍片姿态，防倾覆）。</p>
+
+        <h3>1. 全局层：隐式地图上的地形分析</h3>
+        <p>
+          为在大范围兼顾效率与几何信息，作者在<strong>较粗分辨率的体素</strong>中引入基于 <strong>NDT（Normal
+          Distribution Transform）</strong>的表示：每个体素内用 <strong>3D 高斯分布</strong>拟合局部几何。可与深度学习类比：在<strong>低分辨率栅格</strong>里仍保留<strong>分布级</strong>的高维形状信息，而非仅一个标量高度。
+        </p>
+        <p>
+          对协方差矩阵做特征分解，设特征值为 \(\lambda_1 \le \lambda_2 \le \lambda_3\)，对应特征向量刻画局部主方向；<strong>\(\lambda_1\)</strong> 与最小尺度上的“厚薄/平坦程度”相关。
+        </p>
+        <p><strong>粗糙度（Roughness）</strong></p>
+        <p>
+          $$
+          r(v) = 1 - \frac{\lambda_2 - \lambda_1}{\lambda_2 + \lambda_1}
+          $$
+        </p>
+        <p>
+          若 \(\lambda_1 \ll \lambda_2\)，局部更接近平面，\(r(v)\) 较小（更平坦）；若 \(\lambda_1\) 与 \(\lambda_2\) 接近，起伏更剧烈，粗糙度升高。
+        </p>
+        <p><strong>坡度（Slope）</strong></p>
+        <p>
+          令 \(\mathbf{n}_1\) 为与 \(\lambda_1\) 对应的特征方向所给出的<strong>地面法向</strong>（论文中的约定），\(\mathbf{n}_z\) 为<strong>与重力相反的单位向量</strong>。则
+        </p>
+        <p>
+          $$
+          s(v) = \arccos\left(\frac{\mathbf{n}_1 \cdot \mathbf{n}_z}{\lVert\mathbf{n}_1\rVert\,\lVert\mathbf{n}_z\rVert}\right)
+          $$
+        </p>
+        <p>夹角越大，局部坡面越陡。</p>
+        <p><strong>地形复杂度（Terrain Complexity）</strong></p>
+        <p>
+          将粗糙度、坡度与<strong>稀疏度</strong> \(d(v)\)（论文中对点云/占据稀疏程度的度量）归一化后加权：
+        </p>
+        <p>
+          $$
+          \tau(v) = \alpha_r \frac{r(v)}{r_{\mathrm{crit}}} + \alpha_s \frac{s(v)}{s_{\mathrm{crit}}} + \alpha_d \frac{d(v)}{d_{\mathrm{crit}}}
+          $$
+        </p>
+        <p>再与阈值比较，判断体素 \(v\) 是否可安全通行。</p>
+
+        <h3>2. 局部层：位形–稳定性迭代评估</h3>
+        <p>
+          全局给出朝向后，局部需确定履带与鳍片等<strong>位形</strong>，使机体不翻。
+        </p>
+        <ul>
+          <li>
+            <strong>ZMP / 支撑多边形思路：</strong>将所有<strong>地面接触点</strong>凸包成<strong>支撑多边形（Support
+            Polygon）</strong>；将<strong>质心（CoM）</strong>沿重力方向投影到地面。若投影落在多边形<strong>内部</strong>，则在该简化判据下视为稳定。
+          </li>
+          <li>
+            <strong>迭代修正：</strong>若投影落在外侧，则寻找多边形边界上的<strong>倾覆轴（Tip-over axis）</strong>，在模型中绕该轴做小幅“虚拟转动”，更新接触与多边形，直至稳定或判定不可行——用<strong>几何迭代</strong>替代高成本完整物理仿真。
+          </li>
+        </ul>
+
+        <h2>三、Experiments</h2>
+        <h3>实验 1：地形指标精度</h3>
+        <ul>
+          <li>
+            <strong>真值：</strong>以约 <strong>0.025 m</strong> 分辨率的精细点云 / Surfel 地图上算得的粗糙度为参考。
+          </li>
+          <li>
+            <strong>对比：</strong>传统 Grid / 纯体素在 <strong>0.1 m、0.2 m</strong> 等粗分辨率下，粗糙度与真值偏差大（细节被栅格抹平）。
+          </li>
+          <li>
+            <strong>本文（如 Ours-0.2m）：</strong>借助 NDT 隐式分布，即使在 <strong>0.2 m</strong> 粗体素上，粗糙度与高精度图的相关性仍接近 <strong>1.0</strong>。
+          </li>
+        </ul>
+        <h3>实验 2：全局路径（3D 多层）</h3>
+        <ul>
+          <li><strong>场景：</strong>多层楼梯、大型桥洞等。</li>
+          <li>
+            <strong>ECTN 等 2.5D 方法：</strong>桥上下被压成一层，桥下易被当成不可通，路径绕远。
+          </li>
+          <li>
+            <strong>本文：</strong>保留 3D 多层结构，可走桥洞等<strong>捷径</strong>，路径更短。
+          </li>
+        </ul>
+        <h3>实验 3：实车稳定性（60 条高难度路线）</h3>
+        <ul>
+          <li><strong>场景：</strong>碎石、废墟、凸起、楼梯等。</li>
+          <li><strong>骨架化 CS 方法：</strong>通过率约 <strong>60.0%</strong>（接触估计不准易卡死）。</li>
+          <li><strong>极简动态规划 GEO：</strong>约 <strong>68.0%</strong>。</li>
+          <li>
+            <strong>本文：</strong>约 <strong>90.0%</strong>；假阳性（判安全却翻车）与假阴性（实际可走却判不可走）各仅约 <strong>3</strong> 次（以论文报告为准）。
+          </li>
+        </ul>
+
+        <h2>四、Takeaway</h2>
+        <p>
+          <strong>全局：</strong>用<strong>高斯/NDT</strong>在粗体素里保留几何统计细节，避免只靠标量高程。<strong>局部：</strong>用<strong>支撑多边形 + 质心投影 + 倾覆轴迭代</strong>做可实时运行的稳定性估计，而非依赖重型物理引擎黑箱仿真。整体是<strong>线性代数与优化</strong>（特征分解、法向、凸包与几何迭代）驱动的工程化路径规划，而非数据驱动深度学习。
+        </p>
+
+
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>

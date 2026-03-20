@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="离散数据频域平面路径跟踪：FFT 参数化、矩形窗去噪、非奇异 GVF，IEEE/ASME T-MECH"
+    />
+    <title>频域闭平面路径跟踪（FFT + GVF）| 学习笔记</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Serif+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["$$", "$$"]],
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <a class="logo" href="../index.html">Robot Notes</a>
+      <nav class="nav" aria-label="主导航">
+        <a href="../index.html">主页</a>
+        <a href="../personal.html">个人主页</a>
+        <a href="../notes.html" aria-current="page">学习笔记</a>
+        <a href="../articles.html">文章</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <article class="section prose">
+        <h1>基于离散数据的频域闭平面路径跟踪</h1>
+        <p>
+          <em>Discrete Data-Based Frequency-Domain Closed Planar Path Following Method</em>
+        </p>
+        <p>
+          刊于 <strong>IEEE/ASME Transactions on Mechatronics（T-MECH）</strong>。解决底层控制中的实际问题：路径极其复杂、<strong>无闭式解析式</strong>（手绘涂鸦、图像边缘提取等），且观测仅为<strong>带噪离散点</strong>时，如何稳定跟踪。核心是把 <strong>FFT/DFT</strong> 与<strong>非奇异引导向量场（GVF）</strong>结合，而非用深度学习拟合轨迹。
+        </p>
+
+        <h2>一、Motivation</h2>
+        <ul>
+          <li>
+            <strong>传统 GVF 依赖解析曲线：</strong>经典引导向量场常要求路径写成隐式或参数解析式（如圆 \(x^2+y^2-r^2=0\)），才能构造收敛到曲线的场。
+          </li>
+          <li>
+            <strong>现实数据形态：</strong>自动驾驶、编队等场景中，路径往往来自传感器，是<strong>离散、含噪</strong>（如高斯噪声）的坐标序列，难以直接套入传统 GVF 管线。
+          </li>
+        </ul>
+
+        <h2>二、Methodology</h2>
+
+        <h3>1. 离散点连续化：FFT/DFT 频域参数化</h3>
+        <p>
+          将平面离散点 \(X_d[n]\)、\(Y_d[n]\) 组成复序列 \(\mathcal{C}[n] = X_d[n] + j\,Y_d[n]\)，经<strong>离散傅里叶变换（DFT）</strong>得到系数，从而在参数 \(\theta\) 上重构光滑闭曲线 \(\hat{x}(\theta)\)、\(\hat{y}(\theta)\)。
+        </p>
+        <p>
+          <strong>直观（本轮叠加）：</strong>频域有限项和等价于多个不同频率圆周运动（Epicycle）的叠加，用少量谐波近似复杂闭轨迹。
+        </p>
+
+        <h3>2. 噪声抑制：频域矩形窗（Rectangular Windowing）</h3>
+        <p>
+          对频谱施加宽度为 \(m\) 的<strong>矩形窗</strong>：<strong>只保留前 \(m\) 个（低频）傅里叶系数</strong> \(\hat{a}_k\)，截断高频。低频刻画整体几何（如轮廓形状），高频常对应采样噪声；调节 \(m\) 在<strong>保形细节</strong>与<strong>抑噪</strong>之间折中。
+        </p>
+
+        <h3>3. 非奇异引导向量场（Nonsingular GVF）</h3>
+        <p>
+          将系统扩到三维状态 \(\boldsymbol{\xi} = [x,\, y,\, \theta]^T\)，定义与拟合曲线相关的误差面：
+        </p>
+        <p>
+          $$
+          \hat{\phi}_1 = x(t) - \hat{x}(\theta), \qquad \hat{\phi}_2 = y(t) - \hat{y}(\theta)
+          $$
+        </p>
+        <p>引导向量场（论文给出的无奇点构造）为：</p>
+        <p>
+          $$
+          \boldsymbol{\chi}
+          = k_0\, \nabla\hat{\phi}_1 \times \nabla\hat{\phi}_2
+          - k_1\, \hat{\phi}_1\, \nabla\hat{\phi}_1
+          - k_2\, \hat{\phi}_2\, \nabla\hat{\phi}_2
+          $$
+        </p>
+        <ul>
+          <li>
+            <strong>第一项</strong> \(k_0\,(\nabla\hat{\phi}_1 \times \nabla\hat{\phi}_2)\)：两梯度叉乘，给出沿两曲面交线（期望路径）切向的分量，驱动机器人沿轨迹前进；\(k_0\) 影响沿路径推进的强度与方向。
+          </li>
+          <li>
+            <strong>后两项</strong>：沿 \(-\nabla\hat{\phi}_i\) 的吸引，将偏离路径的状态拉回零误差流形；\(k_1,k_2\) 调节横向收敛快慢。
+          </li>
+        </ul>
+
+        <h2>三、实验要点（Experiments）</h2>
+        <h3>实验 1：不规则闭轨迹真机跟踪</h3>
+        <ul>
+          <li><strong>路径：</strong>由图像边缘得到约 <strong>758</strong> 个离散点构成「\(\pi\)」形闭路，并加人工噪声。</li>
+          <li><strong>平台：</strong>TurtleBot3（地面）、Crazyflie 2.1（四旋翼）。</li>
+          <li>
+            <strong>参数示例：</strong>\(m=40,\; k_0=1,\; k_1=0.8\)（\(k_2\) 等以原文为准）；轨迹平滑且噪声被抑制。
+          </li>
+        </ul>
+        <h3>实验 2：插值对比（FFT vs GPR）</h3>
+        <ul>
+          <li><strong>插值/拟合耗时：</strong>傅里叶侧约 <strong>0.067 s</strong>，高斯过程回归（GPR）约 <strong>1.345 s</strong>。</li>
+          <li><strong>整段跟随仿真耗时：</strong>本方法约 <strong>0.1076 s</strong>，GPR 约 <strong>4.2430 s</strong>。</li>
+          <li>
+            <strong>精度：</strong>平均跟踪误差本方法约 <strong>0.0264 m</strong>，GPR 约 <strong>0.0273 m</strong>（以论文表格为准）。
+          </li>
+        </ul>
+        <p>结论取向：在机载高频控制场景下，频域低维参数化兼顾<strong>误差与实时性</strong>，显著轻于 GPR 类非参数回归。</p>
+        <h3>实验 3：多智能体编队图案</h3>
+        <p>
+          利用参数 \(\theta\) 与曲线表示，在控制律中叠加<strong>一致性（Consensus）协议</strong>，多架无人机可在避碰前提下在空中形成「\(\pi\)」「S」「音符」等分布图案。
+        </p>
+
+        <h2>四、总结</h2>
+        <p>
+          不依赖深度学习「硬拟合」整条轨迹，而用<strong>经典信号处理（DFT/FFT + 低通窗）</strong>把离散噪声轨迹变成光滑闭曲线，再用<strong>微分几何式 GVF（叉乘 + 梯度吸引）</strong>保证跟踪与无奇点性质。与 <a href="./humanoid-wbc-heavy-limbs.html">基于模型的全身控制</a>、<a href="./terrain-multilevel-path-planning.html">几何/优化式规划</a>同属「可解释、可实时」的机器人数学方法谱系。
+        </p>
+<!-- 
+        <h2>五、参考</h2>
+        <p>
+          <em>Discrete Data-Based Frequency-Domain Closed Planar Path Following Method</em> —
+          <strong>IEEE/ASME Transactions on Mechatronics（T-MECH）</strong>。卷期、页码、DOI 请以 IEEE Xplore 记录为准并在此补全。
+        </p> -->
+        <p><a href="../notes.html">← 学习笔记总览</a></p>
+      </article>
+    </main>
+
+    <footer class="footer">
+      <small>© <span id="year"></span> Robot Notes</small>
+    </footer>
+
+    <script src="../main.js"></script>
+  </body>
+</html>
