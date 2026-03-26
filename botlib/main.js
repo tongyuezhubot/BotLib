@@ -9,7 +9,7 @@ var poemByDay = [
   "Bot, love to be",
   "Bot，去雪山脚下",
   "Bot, rage! Rage bot!",
-  "Bot, rage! Rage!",
+  "Bot, not these sounds!",
   "Bot, rage! Rage!",
   "Bot，春天你喜欢德彪西，而今已是严冬了。"
 ];
@@ -19,7 +19,7 @@ if (poemEl) {
   poemEl.textContent = poemByDay[day];
 }
 
-// 文章列表：唯一数据源，新增文章只需在此添加一项
+// 笔记索引：唯一数据源。dir 缺省为 posts；dir: "notes" 表示 notes/ 下页面。subtitle 显示在标题下小字。
 window.articlesNavData = {
   groups: [
     { title: "一、基础 · 控制与稳定性", items: [
@@ -36,10 +36,30 @@ window.articlesNavData = {
       { title: "滑模控制", file: "smc.html", letter: "H" }
     ]},
     { title: "四、学习与决策", items: [
-      { title: "强化学习基础", file: "rl-basics.html", letter: "Q" }
+      { title: "强化学习基础", file: "rl-basics.html", letter: "Q" },
+      { title: "强化学习", file: "rl.html", letter: "Q", dir: "notes", subtitle: "目录" },
+      { title: "PPO 算法学习", file: "ppo.html", letter: "P", dir: "notes", subtitle: "论文与代码" }
+    ]},
+    { title: "五、论文笔记", items: [
+      { title: "DIH-Tele：多物体灵巧手内操作与触觉感知", file: "dih-tele.html", letter: "D", dir: "notes", subtitle: "遥操作 · 模仿学习 · CVAE" },
+      { title: "折纸万能抓手", file: "origami-gripper.html", letter: "Z", dir: "notes", subtitle: "形态学计算 · 逆向设计" },
+      { title: "重型四肢人形全身控制", file: "humanoid-wbc-heavy-limbs.html", letter: "Z", dir: "notes", subtitle: "MPC · HQP" },
+      { title: "多层地形路径规划", file: "terrain-multilevel-path-planning.html", letter: "T", dir: "notes", subtitle: "NDT · ZMP" },
+      { title: "RFSG 图像目标导航", file: "rfsg-image-goal-navigation.html", letter: "R", dir: "notes", subtitle: "特征引导 · 场景图 GCN" },
+      { title: "ReasonManip", file: "reasonmanip-lmm-robot.html", letter: "R", dir: "notes", subtitle: "轴向表示 · GRPO" },
+      { title: "频域平面路径跟踪", file: "frequency-domain-planar-path-following.html", letter: "F", dir: "notes", subtitle: "T-MECH · FFT · GVF" }
     ]}
   ]
 };
+
+function sidebarItemHref(it, pathname) {
+  var inPosts = /\/posts\//.test(pathname);
+  var isNotes = it.dir === "notes";
+  if (inPosts) {
+    return (isNotes ? "../notes/" : "./") + it.file;
+  }
+  return (isNotes ? "./notes/" : "./posts/") + it.file;
+}
 
 function renderArticleSidebar() {
   var aside = document.getElementById("article-sidebar");
@@ -47,13 +67,14 @@ function renderArticleSidebar() {
   var data = window.articlesNavData;
   var pathname = document.location.pathname || "";
   var currentFile = pathname.split("/").pop() || "";
+  var notesHome = /\/posts\//.test(pathname) ? "../notes.html" : "./notes.html";
   var html = '<p class="article-sidebar-title">学习路线</p><nav><ul class="article-sidebar-nav">';
-  html += '<li><a href="../articles.html">文章首页</a></li>';
+  html += '<li><a href="' + notesHome + '">笔记首页</a></li>';
   for (var g = 0; g < data.groups.length; g++) {
     html += '<li class="article-sidebar-group"><span class="article-sidebar-group-title">' + data.groups[g].title + "</span></li>";
     for (var i = 0; i < data.groups[g].items.length; i++) {
       var it = data.groups[g].items[i];
-      var href = "./" + it.file;
+      var href = sidebarItemHref(it, pathname);
       var current = it.file === currentFile ? ' aria-current="page"' : "";
       html += '<li><a href="' + href + '"' + current + ">" + it.title + "</a></li>";
     }
@@ -72,7 +93,8 @@ function renderArticlesIndex() {
       var it = data.groups[g].items[i];
       var letter = it.letter || "?";
       if (!byLetter[letter]) byLetter[letter] = [];
-      byLetter[letter].push({ title: it.title, href: "./posts/" + it.file });
+      var base = it.dir === "notes" ? "./notes/" : "./posts/";
+      byLetter[letter].push({ title: it.title, href: base + it.file, subtitle: it.subtitle || "" });
     }
   }
   var letters = Object.keys(byLetter).sort();
@@ -81,7 +103,12 @@ function renderArticlesIndex() {
     var L = letters[k];
     html += '<section class="articles-letter-group"><span class="articles-letter" aria-hidden="true">' + L + "</span>";
     for (var j = 0; j < byLetter[L].length; j++) {
-      html += '<a class="articles-index-link" href="' + byLetter[L][j].href + '">' + byLetter[L][j].title + "</a>";
+      var entry = byLetter[L][j];
+      html += '<a class="articles-index-link" href="' + entry.href + '">' + entry.title;
+      if (entry.subtitle) {
+        html += "<small>" + entry.subtitle + "</small>";
+      }
+      html += "</a>";
     }
     html += "</section>";
   }

@@ -233,7 +233,7 @@ body {
   color: var(--muted);
 }
 
-/* 文章索引页：融于背景、淡化、居中 */
+/* 笔记索引页（按字母分组）：融于背景、淡化、居中 */
 .articles-index-main {
   background: transparent;
   margin-top: 2rem;
@@ -282,6 +282,15 @@ body {
   color: var(--text);
 }
 
+.articles-index-link small {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--line);
+  letter-spacing: 0.02em;
+}
+
 /* 点击火花特效 */
 .spark-wrap {
   position: fixed;
@@ -310,7 +319,7 @@ body {
   }
 }
 
-/* 文章页右侧学习路线：不挤占正文，正文保持居中 */
+/* 教程页右侧学习路线：不挤占正文，正文保持居中 */
 .article-sidebar {
   position: fixed;
   top: 0;

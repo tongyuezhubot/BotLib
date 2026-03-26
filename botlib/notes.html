@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="学习笔记目录" />
-    <title>学习笔记 | Robot Notes</title>
+    <meta name="description" content="笔记目录：教程与论文札记" />
+    <title>笔记 | Robot Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,45 +13,19 @@
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="articles-index">
     <header class="header">
       <a class="logo" href="./index.html">Robot Notes</a>
       <nav class="nav" aria-label="主导航">
         <a href="./index.html">主页</a>
         <a href="./personal.html">个人主页</a>
-        <a href="./notes.html" aria-current="page">学习笔记</a>
-        <a href="./articles.html">文章</a>
+        <a href="./notes.html" aria-current="page">笔记</a>
       </nav>
     </header>
 
-    <main class="container">
-      <section class="section">
-        <h1>学习笔记</h1>
-        <div class="list-card">
-          <a class="entry" href="./notes/rl.html">强化学习</a>
-          <a class="entry" href="./notes/dih-tele.html"
-            >DIH-Tele：多物体灵巧手内操作与触觉感知 <small>遥操作 · 模仿学习 · CVAE</small></a
-          >
-          <a class="entry" href="./notes/origami-gripper.html"
-            >折纸万能抓手 <small>形态学计算 · 逆向设计 · 单轴驱动</small></a
-          >
-          <a class="entry" href="./notes/humanoid-wbc-heavy-limbs.html"
-            >重型四肢人形全身控制 <small>基于模型 · MPC · HQP</small></a
-          >
-          <a class="entry" href="./notes/terrain-multilevel-path-planning.html"
-            >多层地形路径规划 <small>NDT · ZMP · 履带+鳍片</small></a
-          >
-          <a class="entry" href="./notes/rfsg-image-goal-navigation.html"
-            >RFSG 图像目标导航 <small>特征引导 · 自蒸馏 · 场景图 GCN</small></a
-          >
-          <a class="entry" href="./notes/reasonmanip-lmm-robot.html"
-            >ReasonManip <small>轴向表示 · SFT · GRPO · 推理式操控</small></a
-          >
-          <a class="entry" href="./notes/frequency-domain-planar-path-following.html"
-            >频域平面路径跟踪 <small>T-MECH · FFT · 非奇异 GVF</small></a
-          >
-        </div>
-      </section>
+    <main class="container articles-index-main">
+      <h1 class="articles-index-title">笔记</h1>
+      <div id="articles-index-by-letter" class="articles-index-by-letter"></div>
     </main>
 
     <footer class="footer">
